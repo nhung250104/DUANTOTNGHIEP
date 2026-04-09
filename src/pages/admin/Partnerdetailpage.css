@@ -1,0 +1,611 @@
+/* ── Back button ─────────────────────────────────────────── */
+.pd-btn-back {
+  background: transparent; border: none;
+  color: #64748b; font-size: 13px; font-weight: 500;
+  cursor: pointer; padding: 0; font-family: inherit;
+  transition: color .15s;
+}
+.pd-btn-back:hover { color: #0f766e; }
+
+/* ── Approve / Reject (yêu cầu) ─────────────────────────── */
+.pd-btn-approve {
+  background: #0f766e; color: #fff; border: none;
+  border-radius: 8px; padding: 9px 20px;
+  font-size: 13.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.pd-btn-approve:hover { background: #0d5e57; }
+
+.pd-btn-reject {
+  background: transparent; color: #ef4444;
+  border: 1px solid #fecaca;
+  border-radius: 8px; padding: 9px 20px;
+  font-size: 13.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: all .15s;
+}
+.pd-btn-reject:hover { background: #fff5f5; border-color: #ef4444; }
+
+/* ── Card ────────────────────────────────────────────────── */
+.pd-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px 32px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+/* ── Layout: left + right ────────────────────────────────── */
+.pd-layout {
+  display: flex;
+  gap: 48px;
+  align-items: flex-start;
+}
+
+.pd-left  { flex: 1; min-width: 0; }
+.pd-right { width: 360px; flex-shrink: 0; }
+
+/* ── Section title ───────────────────────────────────────── */
+.pd-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f766e;
+  margin: 0 0 16px;
+}
+
+/* ── Divider ─────────────────────────────────────────────── */
+.pd-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 20px 0;
+}
+
+/* ── Grid fields ─────────────────────────────────────────── */
+.pd-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 24px;
+  margin-bottom: 4px;
+}
+
+.pd-field {}
+.pd-field-label { font-size: 13px; color: #94a3b8; margin: 0 0 4px; }
+.pd-field-value { font-size: 14px; color: #334155; font-weight: 500; margin: 0; }
+.pd-teal        { color: #0f766e !important; }
+
+.pd-link {
+  font-size: 14px;
+  color: #0f766e;
+  font-weight: 500;
+  text-decoration: none;
+  word-break: break-all;
+}
+.pd-link:hover { text-decoration: underline; }
+
+/* ── CCCD ────────────────────────────────────────────────── */
+.pd-cccd-group { display: flex; flex-direction: column; gap: 20px; }
+.pd-cccd-label {
+  font-size: 13px; color: #334155;
+  font-weight: 500; margin: 0 0 8px;
+}
+
+.pd-cccd-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  height: 175px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  background: #f8fafc;
+}
+.pd-cccd-box img         { width: 100%; height: 100%; object-fit: cover; }
+.pd-cccd-placeholder     { font-size: 36px; color: #cbd5e1; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .pd-layout       { flex-direction: column; }
+  .pd-right        { width: 100%; }
+  .pd-cccd-group   { flex-direction: row; }
+  .pd-cccd-box     { flex: 1; }
+  .pd-grid         { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─────────────────────────────────────────
+   Header action buttons
+───────────────────────────────────────── */
+.pd-btn-approve {
+  background: #0f766e; color: #fff; border: none;
+  border-radius: 8px; padding: 9px 20px;
+  font-size: 13.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: background .2s, transform .1s;
+}
+.pd-btn-approve:hover  { background: #0d5e57; transform: translateY(-1px); }
+.pd-btn-approve:active { transform: translateY(0); }
+
+.pd-btn-reject {
+  background: transparent; color: #ef4444;
+  border: 1.5px solid #ef4444;
+  border-radius: 8px; padding: 9px 20px;
+  font-size: 13.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: all .2s;
+}
+.pd-btn-reject:hover { background: #fff5f5; }
+
+/* Done banner */
+.pd-done-banner {
+  align-self: flex-end;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px; font-weight: 600;
+}
+.pd-done-banner--ok  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.pd-done-banner--err { background: #fff5f5; color: #991b1b; border: 1px solid #fecaca; }
+
+/* ─────────────────────────────────────────
+   Modal overlay + box
+───────────────────────────────────────── */
+.pd-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; padding: 24px;
+  animation: pdFade .2s ease;
+}
+@keyframes pdFade { from{opacity:0} to{opacity:1} }
+
+.pd-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%; max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  overflow: hidden;
+  animation: pdSlide .22s ease;
+}
+@keyframes pdSlide { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+/* Modal header */
+.pd-modal-header {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pd-modal-header--reject { background: #fff; }
+.pd-modal-header--approve { background: #fff; }
+
+.pd-modal-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pd-modal-title {
+  font-size: 16px; font-weight: 700;
+  margin: 0 0 4px;
+}
+.pd-modal-header--reject  .pd-modal-title { color: #0f766e; }
+.pd-modal-header--approve .pd-modal-title { color: #0f766e; }
+
+.pd-modal-sub {
+  font-size: 13px; color: #64748b; margin: 0;
+}
+
+/* Modal body */
+.pd-modal-body { padding: 20px 24px; }
+
+.pd-modal-label {
+  display: block;
+  font-size: 13.5px; font-weight: 600;
+  color: #1e293b; margin-bottom: 10px;
+}
+
+.pd-modal-err {
+  background: #fff5f5; border: 1px solid #fecaca;
+  color: #c53030; border-radius: 7px;
+  padding: 8px 12px; font-size: 13px; margin-bottom: 10px;
+}
+
+/* Textarea */
+.pd-modal-textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 14px; font-family: inherit;
+  color: #0f172a; resize: vertical;
+  outline: none; background: #f8fafc;
+  transition: border-color .2s;
+}
+.pd-modal-textarea:focus { border-color: #0f766e; background: #fff; }
+.pd-modal-textarea::placeholder { color: #94a3b8; }
+
+/* Upload box */
+.pd-upload-box {
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 32px 20px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; cursor: pointer;
+  background: #f8fafc;
+  transition: border-color .2s, background .2s;
+}
+.pd-upload-box:hover      { border-color: #0f766e; background: #f0fdf9; }
+.pd-upload-box--done      { border-color: #0f766e; border-style: solid; background: #f0fdf9; }
+
+.pd-upload-icon {
+  font-size: 32px; color: #94a3b8;
+  flex-shrink: 0;
+}
+.pd-upload-box--done .pd-upload-icon { color: #0f766e; font-size: 24px; }
+
+.pd-upload-text     { font-size: 15px; color: #64748b; font-weight: 500; }
+.pd-upload-filename { font-size: 14px; color: #0f766e; font-weight: 600; word-break: break-all; }
+
+/* Modal footer */
+.pd-modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 24px 20px;
+}
+
+.pd-modal-btn-cancel {
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  border-radius: 8px; padding: 9px 18px;
+  font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all .15s;
+}
+.pd-modal-btn-cancel:hover { border-color: #94a3b8; }
+
+.pd-modal-btn-send {
+  background: #0f766e; color: #fff; border: none;
+  border-radius: 8px; padding: 9px 22px;
+  font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background .2s, transform .1s;
+}
+.pd-modal-btn-send:hover  { background: #0d5e57; transform: translateY(-1px); }
+.pd-modal-btn-send:active { transform: translateY(0); }
+
+/* ─────────────────────────────────────────
+   Nút Phê duyệt / Từ chối trên page header
+───────────────────────────────────────── */
+.pd-btn-approve {
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .2s, transform .1s;
+}
+.pd-btn-approve:hover  { background: #0d5e57; transform: translateY(-1px); }
+.pd-btn-approve:active { transform: translateY(0); }
+
+.pd-btn-reject {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .2s, transform .1s;
+}
+.pd-btn-reject:hover  { background: #dc2626; transform: translateY(-1px); }
+.pd-btn-reject:active { transform: translateY(0); }
+
+/* ─────────────────────────────────────────
+   Toast kết quả
+───────────────────────────────────────── */
+.pd-toast {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  align-self: flex-end;
+}
+.pd-toast--approve { background: #dcfce7; color: #166534; }
+.pd-toast--reject  { background: #fee2e2; color: #991b1b; }
+
+/* ─────────────────────────────────────────
+   Modal overlay
+───────────────────────────────────────── */
+.pd-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 24px;
+  animation: pdFade .2s ease;
+}
+@keyframes pdFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─────────────────────────────────────────
+   Modal box
+───────────────────────────────────────── */
+.pd-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  overflow: hidden;
+  animation: pdSlide .22s ease;
+}
+@keyframes pdSlide {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─────────────────────────────────────────
+   Modal header
+───────────────────────────────────────── */
+.pd-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pd-modal-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pd-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+.pd-modal-title--approve { color: #0f766e; }
+
+.pd-modal-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────
+   Modal body
+───────────────────────────────────────── */
+.pd-modal-body {
+  padding: 20px 24px;
+}
+
+.pd-modal-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.pd-modal-err {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  color: #c53030;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+/* Textarea lý do từ chối */
+.pd-modal-textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  resize: vertical;
+  outline: none;
+  transition: border-color .2s;
+  min-height: 120px;
+}
+.pd-modal-textarea:focus    { border-color: #0f766e; background: #fff; }
+.pd-modal-textarea::placeholder { color: #cbd5e1; }
+
+/* Upload box hợp đồng */
+.pd-upload-box {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: border-color .2s, background .2s;
+  min-height: 130px;
+}
+.pd-upload-box:hover           { border-color: #0f766e; background: #f0fdf9; }
+.pd-upload-box--done           { border-color: #0f766e; border-style: solid; }
+
+.pd-upload-arrow {
+  font-size: 32px;
+  color: #94a3b8;
+  line-height: 1;
+}
+.pd-upload-text {
+  font-size: 15px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+.pd-upload-icon    { font-size: 28px; }
+.pd-upload-filename {
+  font-size: 13px;
+  color: #0f766e;
+  font-weight: 600;
+  text-align: center;
+  word-break: break-all;
+}
+
+/* ─────────────────────────────────────────
+   Modal footer
+───────────────────────────────────────── */
+.pd-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pd-modal-btn-cancel {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.pd-modal-btn-cancel:hover { border-color: #94a3b8; background: #f8fafc; }
+
+.pd-modal-btn-submit {
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .2s, transform .1s;
+}
+.pd-modal-btn-submit:hover  { background: #0d5e57; transform: translateY(-1px); }
+.pd-modal-btn-submit:active { transform: translateY(0); }
+
+/* ── Header action buttons ───────────────────────────────── */
+.pd-btn-approve-hdr {
+  background: #0f766e; color: #fff; border: none;
+  border-radius: 8px; padding: 9px 22px;
+  font-size: 13.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.pd-btn-approve-hdr:hover { background: #0d5e57; }
+
+.pd-btn-reject-hdr {
+  background: #ef4444; color: #fff; border: none;
+  border-radius: 8px; padding: 9px 22px;
+  font-size: 13.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.pd-btn-reject-hdr:hover { background: #dc2626; }
+
+/* ── Status badge ────────────────────────────────────────── */
+.pd-status {
+  padding: 8px 20px; border-radius: 8px;
+  font-size: 14px; font-weight: 700;
+  align-self: flex-end;
+}
+.pd-status--approved { background: #dcfce7; color: #166534; }
+.pd-status--rejected { background: #fee2e2; color: #991b1b; }
+
+/* ── Modal overlay ───────────────────────────────────────── */
+.pd-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; padding: 24px;
+  animation: pdFadeIn .2s ease;
+}
+@keyframes pdFadeIn { from{opacity:0} to{opacity:1} }
+
+.pd-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%; max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.18);
+  overflow: hidden;
+  animation: pdSlideUp .22s ease;
+}
+@keyframes pdSlideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Modal header ────────────────────────────────────────── */
+.pd-modal-header {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.pd-modal-header--reject  .pd-modal-title { color: #ef4444; }
+.pd-modal-header--approve .pd-modal-title { color: #0f766e; }
+
+.pd-modal-icon  { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.pd-modal-title { font-size: 17px; font-weight: 700; margin: 0 0 4px; }
+.pd-modal-sub   { font-size: 13px; color: #94a3b8; margin: 0; }
+
+/* ── Modal body ──────────────────────────────────────────── */
+.pd-modal-body  { padding: 20px 24px; }
+.pd-modal-label { font-size: 14px; font-weight: 600; color: #334155; display: block; margin-bottom: 10px; }
+.pd-modal-err   { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 7px; padding: 8px 12px; font-size: 13px; margin-bottom: 10px; }
+
+/* Textarea */
+.pd-modal-textarea {
+  width: 100%; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 12px 14px; font-size: 14px; font-family: inherit;
+  color: #0f172a; resize: vertical; min-height: 130px;
+  background: #f8fafc; outline: none;
+  transition: border-color .2s;
+}
+.pd-modal-textarea:focus     { border-color: #0f766e; background: #fff; }
+.pd-modal-textarea::placeholder { color: #cbd5e1; }
+
+/* Upload box */
+.pd-upload-box {
+  border: 2px dashed #cbd5e1; border-radius: 12px;
+  padding: 32px 24px;
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  cursor: pointer; color: #94a3b8;
+  transition: border-color .2s, background .2s;
+}
+.pd-upload-box:hover           { border-color: #0f766e; background: #f0fdf9; }
+.pd-upload-box--filled         { border-color: #0f766e; background: #f0fdf9; color: #0f766e; }
+.pd-upload-arrow               { font-size: 28px; }
+.pd-upload-text                { font-size: 15px; font-weight: 500; }
+.pd-upload-icon                { font-size: 24px; }
+.pd-upload-filename            { font-size: 14px; font-weight: 600; word-break: break-all; }
+
+/* ── Modal footer ────────────────────────────────────────── */
+.pd-modal-footer {
+  padding: 14px 24px 20px;
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+
+.pd-modal-btn-cancel {
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  border-radius: 8px; padding: 9px 18px;
+  font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all .15s;
+}
+.pd-modal-btn-cancel:hover { border-color: #94a3b8; }
+
+.pd-modal-btn-send {
+  background: #0f766e; color: #fff; border: none;
+  border-radius: 8px; padding: 9px 20px;
+  font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.pd-modal-btn-send:hover { background: #0d5e57; }

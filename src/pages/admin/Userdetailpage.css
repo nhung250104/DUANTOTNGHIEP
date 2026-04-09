@@ -1,0 +1,380 @@
+/* ═══════════════════════════════════════════════
+   Userdetailpage.css
+═══════════════════════════════════════════════ */
+
+/* ── Back button ── */
+.ud-btn-back {
+  background: transparent; border: none;
+  color: #64748b; font-size: 13px; font-weight: 500;
+  cursor: pointer; padding: 0; font-family: inherit;
+  transition: color .15s;
+}
+.pud-btn-back:hover { color: #0d9488; }
+/* ── Toast ── */
+.ud-toast {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  background: #1e293b;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  animation: slideIn 0.25s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Body layout ── */
+.ud-body {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ══════════════════════════════════════════════
+   Cột trái
+══════════════════════════════════════════════ */
+.ud-left {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ud-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ud-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  text-align: center;
+}
+.ud-role-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #d1fae5;
+  color: #065f46;
+}
+.ud-role-badge--locked {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Quick info */
+.ud-quick {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ud-quick-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ud-quick-label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 2px;
+}
+.ud-quick-value {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 500;
+  margin: 0;
+  word-break: break-all;
+}
+.ud-teal { color: #0d9488 !important; }
+
+/* ══════════════════════════════════════════════
+   Cột phải
+══════════════════════════════════════════════ */
+.ud-right { display: flex; flex-direction: column; gap: 0; }
+
+/* Tabs */
+.ud-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: -2px;
+}
+.ud-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ud-tab:hover { color: #0d9488; }
+.ud-tab--active {
+  color: #0d9488;
+  border-bottom-color: #0d9488;
+  font-weight: 700;
+}
+
+/* Card */
+.ud-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0 12px 12px 12px;
+  padding: 24px;
+}
+.ud-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  /* Chiều cao cố định để không nhảy layout khi nút thay đổi text */
+  min-height: 40px;
+}
+.ud-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* Lock button — kích thước cố định, không nhảy */
+.ud-btn-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 160px;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.ud-btn-lock:hover:not(:disabled) { background: #fee2e2; }
+.ud-btn-lock:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.ud-btn-unlock {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+.ud-btn-unlock:hover:not(:disabled) { background: #dcfce7; }
+
+/* Fields grid */
+.ud-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.ud-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ud-field-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin: 0;
+}
+.ud-field-value {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Permission groups */
+.ud-perm-group { margin-bottom: 18px; }
+.ud-perm-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ud-perm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ud-perm-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+}
+.ud-perm-list input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #0d9488;
+  flex-shrink: 0;
+}
+
+/* Role select */
+.ud-role-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: #1e293b;
+  outline: none;
+  background: #fff;
+  cursor: pointer;
+}
+.ud-role-select:focus { border-color: #0d9488; }
+
+/* Save role button (reused in Userspage too) */
+.ud-btn-save-role {
+  background: #0d9488;
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ud-btn-save-role:hover:not(:disabled) { background: #0f766e; }
+.ud-btn-save-role:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════
+   Confirm modal
+══════════════════════════════════════════════ */
+.ud-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.ud-confirm {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px 32px;
+  width: 380px;
+  max-width: 92vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+.ud-confirm-text {
+  font-size: 15px;
+  color: #1e293b;
+  margin: 0 0 22px;
+  line-height: 1.6;
+}
+.ud-confirm-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.ap-btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ap-btn-cancel:hover { background: #e2e8f0; }
+
+.ud-btn-lock-confirm {
+  background: #b91c1c;
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ud-btn-lock-confirm:hover:not(:disabled) { background: #991b1b; }
+.ud-btn-lock-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ud-body { grid-template-columns: 1fr; }
+  .ud-fields { grid-template-columns: 1fr; }
+}
+
+/* ── Shared loading/error (dùng lại từ Userspage) ── */
+.us-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: #64748b;
+}
+.us-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0d9488;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.us-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 14px;
+}
+.us-error button {
+  margin-left: auto;
+  background: #b91c1c;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}

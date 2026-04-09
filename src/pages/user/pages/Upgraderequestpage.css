@@ -1,0 +1,241 @@
+/* ═══════════════════════════════════════════════
+   UpgradeRequestPage.css
+═══════════════════════════════════════════════ */
+
+.urp-page { display: flex; flex-direction: column; gap: 0; }
+
+/* ── Nav back button ── */
+.urp-btn-back {
+  background: transparent; border: none;
+  color: #64748b; font-size: 13px; font-weight: 500;
+  cursor: pointer; padding: 0; font-family: inherit;
+  transition: color .15s;
+}
+.urp-btn-back:hover { color: #0d9488; }
+
+/* ── Loading ── */
+.urp-loading {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+  padding: 80px 0; color: #64748b;
+}
+.urp-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0f766e;
+  border-radius: 50%;
+  animation: urp-spin 0.7s linear infinite;
+}
+@keyframes urp-spin { to { transform: rotate(360deg); } }
+
+/* ── Success ── */
+.urp-success-wrap {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60vh;
+}
+.urp-success-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 480px;
+  width: 100%;
+}
+.urp-success-icon { font-size: 56px; margin-bottom: 16px; }
+.urp-success-card h2 { font-size: 22px; color: #1e293b; margin: 0 0 12px; }
+.urp-success-card p  { font-size: 15px; color: #475569; margin: 0 0 8px; }
+.urp-success-sub     { font-size: 13px !important; color: #94a3b8 !important; }
+.urp-btn-back {
+  margin-top: 24px;
+  background: #0f766e; color: #fff;
+  border: none; padding: 11px 24px;
+  border-radius: 8px; font-size: 14px;
+  font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.urp-btn-back:hover { background: #0d5e57; }
+
+/* ── Body layout ── */
+.urp-body {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Info card (cột trái) ── */
+.urp-info-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.urp-card-title {
+  font-size: 15px; font-weight: 700;
+  color: #1e293b; margin: 0;
+  align-self: flex-start;
+}
+.urp-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #fff; font-size: 24px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.urp-partner-name {
+  font-size: 16px; font-weight: 700;
+  color: #1e293b; margin: 0; text-align: center;
+}
+.urp-level-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.urp-level-badge {
+  padding: 5px 14px; border-radius: 20px;
+  font-size: 13px; font-weight: 700;
+}
+.urp-level-badge--current { background: #e0f2fe; color: #0369a1; }
+.urp-level-badge--next    { background: #d1fae5; color: #065f46; }
+.urp-arrow { font-size: 18px; color: #94a3b8; }
+
+.urp-info-list {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.urp-info-item {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.urp-info-label { font-size: 11px; color: #94a3b8; font-weight: 500; }
+.urp-info-value { font-size: 13px; color: #1e293b; font-weight: 500; word-break: break-all; }
+
+/* Benefits */
+.urp-benefits {
+  width: 100%;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.urp-benefits-title {
+  font-size: 13px; font-weight: 700;
+  color: #065f46; margin: 0 0 8px;
+}
+.urp-benefits ul {
+  margin: 0; padding-left: 16px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.urp-benefits li { font-size: 12.5px; color: #334155; }
+
+/* ── Form card (cột phải) ── */
+.urp-form-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px;
+}
+
+.urp-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #b91c1c;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+}
+
+.urp-field {
+  margin-bottom: 20px;
+}
+.urp-label {
+  display: block;
+  font-size: 13px; font-weight: 600;
+  color: #475569; margin-bottom: 8px;
+}
+.urp-required { color: #ef4444; margin-left: 2px; }
+
+.urp-textarea {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 14px; color: #1e293b;
+  resize: vertical; outline: none;
+  font-family: inherit; line-height: 1.6;
+  transition: border-color 0.15s;
+}
+.urp-textarea:focus { border-color: #0f766e; }
+.urp-textarea::placeholder { color: #94a3b8; }
+
+/* Download box */
+.urp-download-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.urp-download-icon { font-size: 28px; flex-shrink: 0; }
+.urp-download-name { font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 3px; }
+.urp-download-sub  { font-size: 12px; color: #94a3b8; margin: 0; }
+.urp-btn-download {
+  margin-left: auto;
+  background: #0f766e; color: #fff;
+  border: none; padding: 8px 16px;
+  border-radius: 7px; font-size: 13px;
+  font-weight: 600; cursor: pointer;
+  text-decoration: none; white-space: nowrap;
+  transition: background 0.15s;
+}
+.urp-btn-download:hover { background: #0d5e57; }
+
+/* Upload box */
+.urp-upload-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.urp-upload-box:hover { border-color: #0f766e; background: #f0fdf4; }
+.urp-upload-box--filled { border-style: solid; border-color: #0f766e; background: #f0fdf4; }
+.urp-upload-text { font-size: 14px; font-weight: 500; color: #475569; margin: 0 0 3px; }
+.urp-upload-filename { font-size: 14px; font-weight: 600; color: #0f766e; margin: 0 0 3px; }
+.urp-upload-sub  { font-size: 12px; color: #94a3b8; margin: 0; }
+
+/* Cam kết */
+.urp-commit {
+  background: #fef9c3;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.urp-commit p { font-size: 13px; font-weight: 600; color: #92400e; margin: 0 0 8px; }
+.urp-commit ul { margin: 0; padding-left: 16px; }
+.urp-commit li { font-size: 12.5px; color: #78350f; margin-bottom: 4px; }
+
+/* Submit button */
+.urp-btn-submit {
+  width: 100%;
+  background: #0f766e; color: #fff;
+  border: none; padding: 13px;
+  border-radius: 10px; font-size: 15px;
+  font-weight: 700; cursor: pointer;
+  transition: background 0.15s;
+}
+.urp-btn-submit:hover:not(:disabled) { background: #0d5e57; }
+.urp-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .urp-body { grid-template-columns: 1fr; }
+}

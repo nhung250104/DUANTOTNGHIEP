@@ -1,0 +1,193 @@
+/* ── Page header ─────────────────────────────────────────── */
+.ap-page-header { margin-bottom: 24px; }
+.ap-page-header h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin: 0 0 2px; }
+.ap-page-header p  { font-size: 14px; color: #64748b; margin: 0; }
+
+/* ── Body layout ─────────────────────────────────────────── */
+.ap-body {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* ── Left card ───────────────────────────────────────────── */
+.ap-left {
+  width: 270px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 32px 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ap-avatar-circle {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  background: #0f766e;
+  color: #fff;
+  font-size: 32px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+
+.ap-name { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 8px; }
+
+.ap-role-badge {
+  background: #0f766e;
+  color: #fff;
+  font-size: 12px; font-weight: 600;
+  border-radius: 20px;
+  padding: 3px 14px;
+  margin-bottom: 20px;
+}
+
+.ap-quick-info { width: 100%; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+
+.ap-quick-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  margin-bottom: 14px;
+}
+.ap-quick-icon  { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.ap-quick-label { font-size: 12px; color: #94a3b8; margin: 0 0 1px; }
+.ap-quick-value { font-size: 13px; color: #1e293b; font-weight: 500; margin: 0; }
+.ap-teal        { color: #0f766e !important; }
+
+/* ── Right card ──────────────────────────────────────────── */
+.ap-right { flex: 1; min-width: 0; }
+
+/* Tabs */
+.ap-tabs { display: flex; gap: 4px; margin-bottom: 0; }
+.ap-tab {
+  padding: 9px 18px;
+  font-size: 13.5px; font-weight: 500;
+  border: none; border-radius: 8px 8px 0 0;
+  cursor: pointer; font-family: inherit;
+  background: #e2e8f0; color: #64748b;
+  transition: all .15s;
+}
+.ap-tab--active { background: #0f766e; color: #fff; font-weight: 700; }
+
+/* Detail card */
+.ap-detail-card {
+  background: #fff;
+  border-radius: 0 14px 14px 14px;
+  padding: 24px 28px 28px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+.ap-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.ap-detail-title { font-size: 16px; font-weight: 700; color: #0f766e; margin: 0; }
+.ap-detail-actions { display: flex; gap: 8px; }
+
+/* Fields grid */
+.ap-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px 24px;
+}
+
+.ap-field {}
+.ap-field-label { font-size: 12px; color: #94a3b8; margin: 0 0 4px; }
+.ap-field-value { font-size: 14px; color: #334155; margin: 0; font-weight: 500; }
+.ap-field-input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color .2s;
+}
+.ap-field-input:focus { border-color: #0f766e; background: #fff; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.ap-btn-pw {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid #e2e8f0; background: #fff; color: #334155;
+  border-radius: 7px; padding: 7px 14px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all .15s;
+}
+.ap-btn-pw:hover { border-color: #0f766e; color: #0f766e; }
+
+.ap-btn-edit {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #0f766e; color: #fff; border: none;
+  border-radius: 7px; padding: 7px 14px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.ap-btn-edit:hover { background: #0d5e57; }
+
+.ap-btn-cancel {
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  border-radius: 7px; padding: 7px 14px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all .15s;
+}
+.ap-btn-cancel:hover { border-color: #94a3b8; }
+
+.ap-btn-save {
+  background: #0f766e; color: #fff; border: none;
+  border-radius: 7px; padding: 7px 16px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.ap-btn-save:hover { background: #0d5e57; }
+
+/* ── Modal ───────────────────────────────────────────────── */
+.ap-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; padding: 24px;
+  animation: apFade .2s ease;
+}
+@keyframes apFade { from{opacity:0} to{opacity:1} }
+
+.ap-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.18);
+  animation: apSlide .22s ease;
+}
+@keyframes apSlide { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.ap-modal-title   { font-size: 17px; font-weight: 700; color: #0f172a; margin: 0 0 18px; }
+.ap-modal-success { color: #0f766e; font-size: 15px; font-weight: 600; margin: 16px 0; text-align: center; }
+.ap-modal-err     { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 7px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; }
+
+.ap-modal-field { margin-bottom: 16px; }
+.ap-modal-field label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; }
+
+.ap-input-wrap { position: relative; }
+.ap-input-wrap input {
+  width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 9px 36px 9px 12px; font-size: 14px; font-family: inherit;
+  color: #0f172a; outline: none; transition: border-color .2s;
+}
+.ap-input-wrap input:focus { border-color: #0f766e; }
+.ap-eye { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 15px; }
+
+.ap-match    { font-size: 12px; margin: 4px 0 0; }
+.ap-match.ok  { color: #0f766e; }
+.ap-match.err { color: #ef4444; }
+
+.ap-modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
