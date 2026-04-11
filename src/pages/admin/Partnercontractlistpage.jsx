@@ -194,11 +194,15 @@ function Partnercontractlistpage() {
 
   /* ── Navigate to detail ── */
   const goDetail = (c) => {
-    // Encode source và id vào URL để detail page biết lấy data từ đâu
-    const path = isAdmin
-      ? `/admin/partner-contracts/${c.source}/${c.source === "partner" ? c.partnerId : c.upgradeId}`
-      : `/hop-dong-doi-tac/${c.source}/${c.source === "partner" ? c.partnerId : c.upgradeId}`;
-    navigate(path);
+    const recordId = c.source === "partner" ? c.partnerId : c.upgradeId;
+
+    if (!recordId) {
+      console.error("goDetail: không tìm thấy id", c);
+      return;
+    }
+
+    const base = isAdmin ? "/admin/partner-contracts" : "/hop-dong-doi-tac";
+    navigate(`${base}/${c.source}/${recordId}`);
   };
 
   /* ── Render ── */

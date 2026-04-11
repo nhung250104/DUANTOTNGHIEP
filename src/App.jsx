@@ -81,7 +81,7 @@ function App() {
         <Route path="/admin/customer-contracts/:id"    element={<Customercontractdetail isAdmin />} />
         <Route path="/admin/customer-contracts/tao-moi" element={<Customercontractcreate />} />
         <Route path="/admin/partner-contracts"        element={<Partnercontractlistpage />} />
-        <Route path="/admin/partner-contracts/:id"    element={<Partnercontractdetailpage />} />
+        <Route path="/admin/partner-contracts/:type/:id" element={<Partnercontractdetailpage />} />
         <Route path="/admin/partner-contracts/pdf" element={<Partnercontractpdfmodal />} />
               </Route>
 
