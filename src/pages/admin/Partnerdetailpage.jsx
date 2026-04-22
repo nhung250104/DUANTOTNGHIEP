@@ -3,10 +3,10 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
 import "./Partnerdetailpage.css";
 
-/* ─── Helper: tạo refLink từ tên + code ─────────────────── */
+/* ─── Helper ─────────────────────────────────────────────── */
 const toSlug = (str) =>
   str.toLowerCase()
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")  // bỏ dấu
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/đ/g, "d").replace(/Đ/g, "d")
     .replace(/[^a-z0-9\s-]/g, "")
     .trim().replace(/\s+/g, "-");
@@ -137,11 +137,15 @@ function Partnerdetailpage() {
   const [partner,  setPartner ] = useState(null);
   const [loading,  setLoading ] = useState(true);
   const [error,    setError   ] = useState("");
-  const [modal,    setModal   ] = useState(null);   // null | "approve" | "reject"
-  const [done,     setDone    ] = useState(null);   // null | "approved" | "rejected"
+  const [modal,    setModal   ] = useState(null);
+  const [done,     setDone    ] = useState(null);
   const [saving,   setSaving  ] = useState(false);
 
-  /* ── Fetch partner theo id ── */
+  // Tab: "info" | "commission"
+  // Dùng tab UI nhỏ ở header thay vì navigate hẳn sang trang khác
+  // nhưng theo yêu cầu → dùng nút điều hướng sang trang riêng
+  const [activeTab, setActiveTab] = useState("info");
+
   useEffect(() => {
     const fetchPartner = async () => {
       try {
@@ -160,7 +164,6 @@ function Partnerdetailpage() {
     fetchPartner();
   }, [id]);
 
-  /* ── Từ chối ── */
   const handleReject = async (reason) => {
     try {
       setSaving(true);
@@ -175,7 +178,6 @@ function Partnerdetailpage() {
     }
   };
 
-  /* ── Phê duyệt ── mặc định gán Cấp 1 ── */
   const handleApprove = async (file) => {
     try {
       setSaving(true);
@@ -199,7 +201,6 @@ function Partnerdetailpage() {
     }
   };
 
-  /* ── Loading / Error ── */
   if (loading) return (
     <div className="pd-loading">
       <div className="pd-spinner" />
@@ -230,29 +231,55 @@ function Partnerdetailpage() {
           <p>{p.name}</p>
         </div>
 
-        {/* Nút hành động cho yêu cầu chờ duyệt */}
-        {isRequest && !done && (
-          <div style={{ display: "flex", gap: 10, alignSelf: "flex-end" }}>
-            <button
-              className="pd-btn-reject-hdr"
-              onClick={() => setModal("reject")}
-              disabled={saving}
-            >
-              Từ chối
-            </button>
-            <button
-              className="pd-btn-approve-hdr"
-              onClick={() => setModal("approve")}
-              disabled={saving}
-            >
-              Phê duyệt
-            </button>
-          </div>
-        )}
+        <div style={{ display: "flex", gap: 10, alignSelf: "flex-end", flexWrap: "wrap" }}>
+          {/* ── Nút Thông tin đối tác / Hoa hồng ── */}
+          {!isRequest && (
+            <>
+              <button
+                className={`pd-tab-btn ${activeTab === "info" ? "pd-tab-btn--active" : ""}`}
+                onClick={() => {
+                  setActiveTab("info");
+                  navigate(`/admin/partners-profile/${id}`);
+                }}
+              >
+                Thông tin đối tác
+              </button>
+              <button
+                className={`pd-tab-btn pd-tab-btn--commission ${activeTab === "commission" ? "pd-tab-btn--active" : ""}`}
+                onClick={() => {
+                  setActiveTab("commission");
+                  // ── Điều hướng sang trang hoa hồng ──
+                  navigate(`/admin/partners-profile/${id}/commission`);
+                }}
+              >
+                Hoa hồng
+              </button>
+            </>
+          )}
 
-        {/* Trạng thái sau khi xử lý */}
-        {done === "approved" && <div className="pd-status pd-status--approved">✓ Đã phê duyệt</div>}
-        {done === "rejected" && <div className="pd-status pd-status--rejected">✕ Đã từ chối</div>}
+          {/* Nút hành động cho yêu cầu chờ duyệt */}
+          {isRequest && !done && (
+            <>
+              <button
+                className="pd-btn-reject-hdr"
+                onClick={() => setModal("reject")}
+                disabled={saving}
+              >
+                Từ chối
+              </button>
+              <button
+                className="pd-btn-approve-hdr"
+                onClick={() => setModal("approve")}
+                disabled={saving}
+              >
+                Phê duyệt
+              </button>
+            </>
+          )}
+
+          {done === "approved" && <div className="pd-status pd-status--approved">✓ Đã phê duyệt</div>}
+          {done === "rejected" && <div className="pd-status pd-status--rejected">✕ Đã từ chối</div>}
+        </div>
       </div>
 
       <div className="pd-card">
@@ -279,7 +306,6 @@ function Partnerdetailpage() {
               <Field label="Email"           value={p.email}    />
             </div>
 
-            {/* Thông tin công việc — chỉ hiển thị khi đã duyệt */}
             {!isRequest && (
               <>
                 <div className="pd-divider" />
@@ -364,7 +390,7 @@ function Partnerdetailpage() {
       </div>
 
       {/* ── Modals ── */}
-      {modal === "reject"  && (
+      {modal === "reject" && (
         <RejectModal
           name={p.name}
           onClose={() => setModal(null)}

@@ -12,20 +12,21 @@ import Register        from "./pages/user/auth/Register";
 import PendingApproval from "./pages/user/auth/PendingApproval";
 
 // ===== Admin Pages =====
-import Newspage           from "./pages/admin/Newspage";
-import Newsdetailpage     from "./pages/admin/Newsdetailpage";
-import Userspage          from "./pages/admin/Userspage";
-import Userdetailpage     from "./pages/admin/Userdetailpage";
-import Accountpage        from "./pages/admin/Accountpage";
-import Partnerprofilepage from "./pages/admin/Partnerprofilepage";
-import Partnerdetailpage  from "./pages/admin/Partnerdetailpage";
-import Orgchartpage       from "./pages/admin/Orgchartpage";
-import Customercontractpage from "./pages/admin/Customercontractpage";
-import Customercontractdetail from "./pages/admin/Customercontractdetail";
-import Customercontractcreate from "./pages/admin/Customercontractcreate";
-import Partnercontractlistpage from "./pages/admin/Partnercontractlistpage";
+import Newspage                  from "./pages/admin/Newspage";
+import Newsdetailpage            from "./pages/admin/Newsdetailpage";
+import Userspage                 from "./pages/admin/Userspage";
+import Userdetailpage            from "./pages/admin/Userdetailpage";
+import Accountpage               from "./pages/admin/Accountpage";
+import Partnerprofilepage        from "./pages/admin/Partnerprofilepage";
+import Partnerdetailpage         from "./pages/admin/Partnerdetailpage";
+import Orgchartpage              from "./pages/admin/Orgchartpage";
+import Customercontractpage      from "./pages/admin/Customercontractpage";
+import Customercontractdetail    from "./pages/admin/Customercontractdetail";
+import Customercontractcreate    from "./pages/admin/Customercontractcreate";
+import Partnercontractlistpage   from "./pages/admin/Partnercontractlistpage";
 import Partnercontractdetailpage from "./pages/admin/Partnercontractdetailpage";
-import Partnercontractpdfmodal from "./pages/admin/Partnercontractpdfmodal";
+import Statspage                 from "./pages/admin/Statspage";
+import Commissionpage            from "./pages/admin/Commissionpage";
 
 // ===== User Pages =====
 import Usernewspage       from "./pages/user/pages/Usernewspage";
@@ -67,33 +68,64 @@ function App() {
       </Route>
 
       {/* ── Admin (sidebar + header) ── */}
-      <Route path="/admin" element={<PrivateLayout />}>
-        <Route index                         element={<Navigate to="/admin/news" replace />} />
-        <Route path="news"                   element={<Newspage />} />
-        <Route path="news/:id"               element={<Newsdetailpage />} />
-        <Route path="users"                  element={<Userspage />} />
-        <Route path="users/:id"              element={<Userdetailpage />} />
-        <Route path="account"                element={<Accountpage />} />
-        <Route path="partners"               element={<Partnerprofilepage />} />
-        <Route path="partners-profile/:id"   element={<Partnerdetailpage />} />
-        <Route path="orgchart"               element={<Orgchartpage />} />
-        <Route path="/admin/customer-contracts"        element={<Customercontractpage isAdmin />} />
-        <Route path="/admin/customer-contracts/:id"    element={<Customercontractdetail isAdmin />} />
-        <Route path="/admin/customer-contracts/tao-moi" element={<Customercontractcreate />} />
-        <Route path="/admin/partner-contracts"        element={<Partnercontractlistpage />} />
-        <Route path="/admin/partner-contracts/:type/:id" element={<Partnercontractdetailpage />} />
-        <Route path="/admin/partner-contracts/pdf" element={<Partnercontractpdfmodal />} />
-              </Route>
+      <Route path="/admin" element={<PrivateLayout adminOnly />}>
+        <Route index element={<Navigate to="/admin/news" replace />} />
+
+        {/* Tin tức */}
+        <Route path="news"     element={<Newspage />} />
+        <Route path="news/:id" element={<Newsdetailpage />} />
+
+        {/* Quản lý người dùng */}
+        <Route path="users"     element={<Userspage />} />
+        <Route path="users/:id" element={<Userdetailpage />} />
+
+        {/* Tài khoản */}
+        <Route path="account" element={<Accountpage />} />
+
+        {/* Hồ sơ đối tác */}
+        <Route path="partners"                             element={<Partnerprofilepage />} />
+        <Route path="partners-profile/:id"                element={<Partnerdetailpage />} />
+        {/* ✅ FIX: thêm route hoa hồng */}
+        <Route path="partners-profile/:id/commission"     element={<Commissionpage />} />
+
+        {/* Sơ đồ đối tác */}
+        <Route path="orgchart" element={<Orgchartpage />} />
+
+        {/* Hợp đồng đối tác */}
+        <Route path="partner-contracts"                   element={<Partnercontractlistpage />} />
+        {/* ✅ FIX: đổi :type → :source cho đúng với useParams().source */}
+        <Route path="partner-contracts/:source/:id"       element={<Partnercontractdetailpage />} />
+
+        {/* Hợp đồng khách hàng (admin) */}
+        {/* ✅ FIX: bỏ /admin/ ở đầu vì đã lồng trong /admin */}
+        <Route path="customer-contracts"                  element={<Customercontractpage isAdmin />} />
+        <Route path="customer-contracts/:id"              element={<Customercontractdetail isAdmin />} />
+        <Route path="customer-contracts/tao-moi"          element={<Customercontractcreate />} />
+
+        {/* Thống kê */}
+        <Route path="stats" element={<Statspage />} />
+      </Route>
 
       {/* ── User (sidebar + header) ── */}
       <Route element={<PrivateLayout />}>
         <Route path="/dashboard" element={<Usernewspage />} />
         <Route path="/news/:id"  element={<Usernewsdetailpage />} />
-        <Route path="upgrade-requests" element={<Upgraderequestpage />} />
-        <Route path="partner-contract" element={<Partnercontractpage />} />
-        <Route path="/hop-dong-khach-hang"             element={<Customercontractpage />} />
-        <Route path="/hop-dong-khach-hang/:id"         element={<Customercontractdetail />} />
-        <Route path="/hop-dong-khach-hang/tao-moi"     element={<Customercontractcreate />} />
+
+        {/* Nâng cấp */}
+        <Route path="/upgrade-requests"                   element={<Upgraderequestpage />} />
+
+        {/* Hợp đồng đối tác (user) */}
+        <Route path="/partner-contract"                   element={<Partnercontractpage />} />
+        <Route path="/hop-dong-doi-tac"                   element={<Partnercontractlistpage />} />
+        <Route path="/hop-dong-doi-tac/:source/:id"       element={<Partnercontractdetailpage />} />
+        {/* ✅ Hoa hồng cho user tự xem */}
+        <Route path="/hop-doi-tac/:id/commission"         element={<Commissionpage />} />
+
+        {/* Hợp đồng khách hàng (user) */}
+        <Route path="/hop-dong-khach-hang"                element={<Customercontractpage />} />
+        {/* ✅ FIX: tao-moi phải đặt TRƯỚC :id để không bị match nhầm */}
+        <Route path="/hop-dong-khach-hang/tao-moi"        element={<Customercontractcreate />} />
+        <Route path="/hop-dong-khach-hang/:id"            element={<Customercontractdetail />} />
       </Route>
 
       {/* ── Fallback ── */}

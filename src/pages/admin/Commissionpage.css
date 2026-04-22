@@ -1,0 +1,278 @@
+/* ═══════════════════════════════════════════════
+   CommissionPage.css   prefix: cp-
+═══════════════════════════════════════════════ */
+
+/* ─── Page ─────────────────────────────────────── */
+.cp-page {
+  padding: 28px 32px;
+  max-width: 1300px;
+  margin: 0 auto;
+  font-family: "Segoe UI", sans-serif;
+  color: #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Loading / Error ───────────────────────────── */
+.cp-loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 300px; gap: 14px; color: #64748b;
+}
+.cp-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #0d9488;
+  border-radius: 50%;
+  animation: cp-spin 0.8s linear infinite;
+}
+@keyframes cp-spin { to { transform: rotate(360deg); } }
+.cp-error-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px; padding: 60px; color: #ef4444;
+}
+.cp-error-wrap button {
+  padding: 8px 20px; background: #0d9488;
+  color: #fff; border: none; border-radius: 8px; cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════
+   Summary cards
+═══════════════════════════════════════════════ */
+.cp-summary-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .cp-summary-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+.cp-summary-card {
+  border-radius: 14px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cp-summary-card--dark {
+  background: linear-gradient(135deg, #0f766e, #0d9488);
+  color: #fff;
+}
+.cp-summary-card--teal {
+  background: linear-gradient(135deg, #134e4a, #0f766e);
+  color: #fff;
+}
+
+.cp-summary-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin: 0;
+}
+.cp-summary-amount {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.2;
+}
+.cp-summary-sub {
+  font-size: 12px;
+  opacity: 0.75;
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   Commission type cards
+═══════════════════════════════════════════════ */
+.cp-type-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .cp-type-row { grid-template-columns: 1fr; }
+}
+
+.cp-type-card {
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cp-type-card--teal   { border-top: 3px solid #0d9488; }
+.cp-type-card--blue   { border-top: 3px solid #3b82f6; }
+.cp-type-card--purple { border-top: 3px solid #8b5cf6; }
+
+.cp-type-header { margin-bottom: 2px; }
+
+.cp-type-level {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 10px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.cp-type-level--teal   { background: #d1fae5; color: #059669; }
+.cp-type-level--blue   { background: #dbeafe; color: #2563eb; }
+.cp-type-level--purple { background: #ede9fe; color: #7c3aed; }
+
+.cp-type-title {
+  font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;
+}
+.cp-type-desc {
+  font-size: 12px; color: #64748b; margin: 0; line-height: 1.6;
+}
+
+.cp-type-rate {
+  display: flex; align-items: baseline; gap: 6px; margin-top: 4px;
+}
+.cp-type-pct {
+  font-size: 28px; font-weight: 800; color: #0d9488;
+}
+.cp-type-rate-label {
+  font-size: 12px; color: #0d9488; font-weight: 500;
+}
+
+.cp-type-footer {
+  display: flex; flex-direction: column; gap: 2px;
+  padding-top: 10px; border-top: 1px solid #f1f5f9; margin-top: 4px;
+}
+.cp-type-total-label { font-size: 11px; color: #94a3b8; }
+.cp-type-total { font-size: 16px; font-weight: 700; }
+.cp-type-total--teal   { color: #0d9488; }
+.cp-type-total--blue   { color: #3b82f6; }
+.cp-type-total--purple { color: #8b5cf6; }
+
+/* ═══════════════════════════════════════════════
+   Tables
+═══════════════════════════════════════════════ */
+.cp-table-section {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+
+.cp-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cp-table-title {
+  font-size: 14px; font-weight: 700;
+}
+.cp-table-title--teal   { color: #0d9488; }
+.cp-table-title--blue   { color: #3b82f6; }
+.cp-table-title--purple { color: #8b5cf6; }
+
+.cp-table-total {
+  font-size: 15px; font-weight: 700; color: #0d9488;
+}
+
+.cp-table-wrap { overflow-x: auto; }
+
+.cp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.cp-table thead tr { border-bottom: 1px solid #f1f5f9; }
+.cp-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 12px; font-weight: 600;
+  color: #64748b; white-space: nowrap;
+}
+.cp-table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid #f8fafc;
+  color: #1e293b;
+  vertical-align: middle;
+}
+.cp-row { transition: background 0.1s; }
+.cp-row:hover { background: #f8fafc; }
+.cp-row:last-child td { border-bottom: none; }
+.cp-empty {
+  text-align: center; color: #94a3b8;
+  padding: 32px !important; font-size: 13px;
+}
+
+/* ─── Cell styles ───────────────────────────────── */
+.cp-link {
+  color: #0d9488; font-weight: 500; cursor: pointer;
+}
+.cp-link:hover { text-decoration: underline; }
+
+.cp-partner-code {
+  font-size: 12px; color: #94a3b8; font-weight: 400;
+}
+
+.cp-pct {
+  display: inline-block;
+  padding: 2px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+}
+.cp-pct--teal   { background: #d1fae5; color: #059669; }
+.cp-pct--blue   { background: #dbeafe; color: #2563eb; }
+.cp-pct--purple { background: #ede9fe; color: #7c3aed; }
+
+.cp-condition {
+  font-size: 12px; color: #64748b;
+}
+
+/* ─── Pagination ────────────────────────────────── */
+.cp-pager {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 4px; padding: 10px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+.cp-pager-btn {
+  min-width: 30px; height: 30px; padding: 0 6px;
+  border: 1px solid #e2e8f0; border-radius: 6px;
+  background: #fff; color: #64748b; font-size: 13px;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.cp-pager-btn:hover:not(:disabled) { border-color: #0d9488; color: #0d9488; }
+.cp-pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cp-pager-btn--active { background: #0d9488; color: #fff; border-color: #0d9488; }
+.cp-pager-dots { color: #94a3b8; font-size: 13px; padding: 0 4px; }
+
+/* ═══════════════════════════════════════════════
+   Tab buttons (dùng chung với Partnerdetailpage)
+   Thêm vào Partnerdetailpage.css nếu chưa có
+═══════════════════════════════════════════════ */
+.pd-tab-btn {
+  padding: 8px 18px;
+  border: 1.5px solid #0d9488;
+  border-radius: 8px;
+  background: #fff;
+  color: #0d9488;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pd-tab-btn:hover { background: #f0fdfa; }
+
+.pd-tab-btn--active {
+  background: #0d9488;
+  color: #fff;
+}
+
+.pd-tab-btn--commission {
+  /* Giữ nguyên màu teal, không đổi màu */
+}

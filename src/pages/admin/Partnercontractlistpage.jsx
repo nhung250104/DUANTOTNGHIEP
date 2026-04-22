@@ -1,14 +1,3 @@
-/**
- * PartnerContractListPage.jsx
- *
- * Tổng hợp hợp đồng đối tác từ 2 nguồn:
- *   1. partners (status=approved, level=1)  → HĐ đăng ký làm đối tác
- *   2. upgradeRequests (status=approved)    → HĐ nâng cấp cấp 2, 3
- *
- * Admin: xem tất cả
- * Đối tác: chỉ xem của mình
- */
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -97,7 +86,7 @@ const buildContractList = (partners, upgradeRequests) => {
       return new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
     };
     return toMs(b.signDate) - toMs(a.signDate);
-  });
+  }); 
 
   return list;
 };
@@ -202,9 +191,11 @@ function Partnercontractlistpage() {
     }
 
     const base = isAdmin ? "/admin/partner-contracts" : "/hop-dong-doi-tac";
-    navigate(`${base}/${c.source}/${recordId}`);
-  };
 
+    navigate(`${base}/${c.source}/${recordId}`, {
+      state: { contract: c }
+    });
+  };
   /* ── Render ── */
   return (
     <div className="pc-page">
