@@ -130,7 +130,7 @@
       "phone": "0373463746",
       "password": "12345678",
       "role": "Đối tác",
-      "status": "active"
+      "status": "locked"
     },
     {
       "id": "9",
@@ -606,7 +606,7 @@
       "expireDate": "01/03/2027",
       "value": 20000000,
       "commission": 2000000,
-      "status": "pending",
+      "status": "approved",
       "contractFile": "hdcttnhh123.pdf",
       "rejectReason": null,
       "rejectDetail": null,
@@ -671,6 +671,32 @@
       "rejectReason": null,
       "rejectDetail": null,
       "createdAt": "01/03/2026"
+    }
+  ],
+  "commissionRequests": [
+    {
+      "id": "1",
+      "partnerId": "1",
+      "partnerCode": "DT000001",
+      "partnerName": "Nguyễn Văn A",
+      "currentL1": 20,
+      "currentL2": 10,
+      "currentL3": 3,
+      "requestDetail": "Tôi muốn điều chỉnh tỉ lệ hoa hồng cấp 1 lên 25% do đã đạt doanh số mục tiêu quý 1/2026",
+      "status": "pending",
+      "createdAt": "01/04/2026"
+    },
+    {
+      "id": "2",
+      "partnerId": "4",
+      "partnerCode": "DT000004",
+      "partnerName": "Nguyễn Văn D",
+      "currentL1": 30,
+      "currentL2": 15,
+      "currentL3": 7,
+      "requestDetail": "chỉnh sửa hoa hồng ",
+      "status": "pending",
+      "createdAt": "23/04/2026"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
