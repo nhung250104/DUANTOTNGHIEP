@@ -34,6 +34,8 @@ import Usernewspage       from "./pages/user/pages/Usernewspage";
 import Usernewsdetailpage from "./pages/user/pages/Usernewsdetailpage";
 import Upgraderequestpage from "./pages/user/pages/Upgraderequestpage";
 import Partnercontractpage from "./pages/user/pages/Partnercontractpage";
+import Myprofilepage      from "./pages/user/pages/Myprofilepage";
+import Mystatspage        from "./pages/user/pages/Mystatspage";
 
 // ===== Components =====
 import Header        from "./components/Header";
@@ -119,6 +121,10 @@ function App() {
       <Route element={<PrivateLayout />}>
         <Route path="/dashboard" element={<Usernewspage />} />
         <Route path="/news/:id"  element={<Usernewsdetailpage />} />
+
+        {/* Thông tin cá nhân & thống kê */}
+        <Route path="/my-profile"                         element={<Myprofilepage />} />
+        <Route path="/my-stats"                           element={<Mystatspage />} />
 
         {/* Nâng cấp */}
         <Route path="/upgrade-requests"                   element={<Upgraderequestpage />} />
