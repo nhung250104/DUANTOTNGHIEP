@@ -26,12 +26,11 @@ const ADMIN_MENU = [
 ];
 
 const MEMBER_MENU = [
-  { path: "/dashboard",      icon: LayoutDashboard, label: "Trang chủ"         },
-  { path: "/my-profile",     icon: User,            label: "Hồ sơ cá nhân"    },
-  { path: "/my-contracts",   icon: GitBranch,       label: "Sơ đồ cây" },
-  { path: "/my-commissions", icon: Newspaper,       label: "Hợp đồng khách hàng"         },
-  { path: "/hop-dong-doi-tac",icon: Newspaper,       label: "Hợp đồng đối tác"          },
-  { path: "/my-commissions", icon: BarChart3,       label: "Thống kê"         },
+  { path: "/dashboard",           icon: LayoutDashboard, label: "Trang chủ"           },
+  { path: "/partner-contract",    icon: FolderOpen,      label: "Hồ sơ đối tác"       },
+  { path: "/upgrade-requests",    icon: User,            label: "Nâng cấp đối tác"    },
+  { path: "/hop-dong-doi-tac",    icon: FileCheck,       label: "Hợp đồng đối tác"    },
+  { path: "/hop-dong-khach-hang", icon: FileText,        label: "Hợp đồng khách hàng" },
 ];
 
 /* ─── Component ──────────────────────────────────────────── */

@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Outlet, Navigate } from "react-router-dom";
+import useAuthStore from "./store/authStore";
 import "./App.css";
 
 // ===== Public Pages =====
@@ -50,6 +51,14 @@ const MainLayout = () => (
 
 const AuthLayout = () => <Outlet />;
 
+// Fallback: redirect theo trạng thái đăng nhập thay vì luôn về /login
+const SmartFallback = () => {
+  const user = useAuthStore((s) => s.user);
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role?.toLowerCase() === "admin") return <Navigate to="/admin/news" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+
 function App() {
   return (
     <Routes>
@@ -97,10 +106,10 @@ function App() {
         <Route path="partner-contracts/:source/:id"       element={<Partnercontractdetailpage />} />
 
         {/* Hợp đồng khách hàng (admin) */}
-        {/* ✅ FIX: bỏ /admin/ ở đầu vì đã lồng trong /admin */}
+        {/* tao-moi đặt TRƯỚC :id để khớp với convention bên user */}
         <Route path="customer-contracts"                  element={<Customercontractpage isAdmin />} />
-        <Route path="customer-contracts/:id"              element={<Customercontractdetail isAdmin />} />
         <Route path="customer-contracts/tao-moi"          element={<Customercontractcreate />} />
+        <Route path="customer-contracts/:id"              element={<Customercontractdetail isAdmin />} />
 
         {/* Thống kê */}
         <Route path="stats" element={<Statspage />} />
@@ -129,7 +138,7 @@ function App() {
       </Route>
 
       {/* ── Fallback ── */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<SmartFallback />} />
 
     </Routes>
   );

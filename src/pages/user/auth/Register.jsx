@@ -234,8 +234,13 @@ function Register() {
   const onImage = (e, side) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    side === "front" ? setCccdFront(url) : setCccdBack(url);
+    // Dùng base64 (data URL) thay cho blob URL để ảnh còn xem được sau khi user đóng tab.
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result;
+      side === "front" ? setCccdFront(dataUrl) : setCccdBack(dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   const onContract = (e) => {

@@ -74,7 +74,7 @@ function Login() {
 
       /* ── Kiểm tra trạng thái tài khoản ── */
       if (user.status === "pending_approval") {
-        setError("Tài khoản của bạn đang chờ admin duyệt hồ sơ đối tác. Vui lòng đợi thông báo.");
+        navigate("/pending-approval");
         return;
       }
       if (user.status === "locked") {
@@ -83,13 +83,14 @@ function Login() {
       }
 
       /* ── Đăng nhập thành công ── */
-      // Tạo fake token (thực tế backend trả về JWT)
+      // Không lưu password trong store
+      const { password: _pw, ...safeUser } = user;
       const token = btoa(`${user.id}:${user.email}:${Date.now()}`);
 
-      login(user, token);
+      login(safeUser, token);
 
-      /* ── Chuyển trang theo role ── */
-      if (user.role === "Admin") {
+      /* ── Chuyển trang theo role (so sánh không phân biệt hoa thường) ── */
+      if (user.role?.toLowerCase() === "admin") {
         navigate("/admin/news");
       } else {
         navigate("/dashboard");
