@@ -30,7 +30,7 @@ const MEMBER_MENU = [
   { path: "/my-profile",     icon: User,            label: "Hồ sơ cá nhân"    },
   { path: "/my-contracts",   icon: GitBranch,       label: "Sơ đồ cây" },
   { path: "/my-commissions", icon: Newspaper,       label: "Hợp đồng khách hàng"         },
-  { path: "/partner-contract",icon: Newspaper,       label: "Hợp đồng đối tác"          },
+  { path: "/hop-dong-doi-tac",icon: Newspaper,       label: "Hợp đồng đối tác"          },
   { path: "/my-commissions", icon: BarChart3,       label: "Thống kê"         },
 ];
 
