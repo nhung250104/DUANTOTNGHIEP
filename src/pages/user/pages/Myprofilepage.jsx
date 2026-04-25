@@ -156,7 +156,9 @@ function Myprofilepage() {
           list.find((p) => String(p.userId) === String(currentUser.id)) ||
           list.find((p) => p.email === currentUser.email);
         setPartner(found || null);
-        setDraft(found ? { ...found } : {});
+        // Backfill street từ address cho data cũ (Register lưu vào address,
+        // admin đọc street). Sau lần lưu đầu hai bên đồng bộ.
+        setDraft(found ? { ...found, street: found.street || found.address || "" } : {});
       } catch (e) {
         console.error(e);
         setError("Không tải được thông tin cá nhân. Kiểm tra server.");
@@ -332,7 +334,8 @@ function Myprofilepage() {
                 { label: "Email",           name: "email",    editable: false },
                 { label: "Tỉnh/Thành phố", name: "province", editable: true  },
                 { label: "Xã/Phường",       name: "ward",     editable: true  },
-                { label: "Địa chỉ",          name: "address",  editable: true  },
+                // Dùng đúng "street" như admin Partnerdetailpage để hai bên đọc/ghi cùng field
+                { label: "Số nhà/phố",      name: "street",   editable: true  },
               ].map((f) => (
                 <div className="ap-field" key={f.name}>
                   <p className="ap-field-label">{f.label}</p>
@@ -344,7 +347,12 @@ function Myprofilepage() {
                       onChange={onDraftChange}
                     />
                   ) : (
-                    <p className="ap-field-value">{partner[f.name] ?? "—"}</p>
+                    <p className="ap-field-value">
+                      {/* street fallback về address cho data cũ */}
+                      {(f.name === "street"
+                        ? (partner.street || partner.address)
+                        : partner[f.name]) ?? "—"}
+                    </p>
                   )}
                 </div>
               ))}

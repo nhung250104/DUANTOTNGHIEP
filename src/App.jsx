@@ -28,6 +28,8 @@ import Partnercontractlistpage   from "./pages/admin/Partnercontractlistpage";
 import Partnercontractdetailpage from "./pages/admin/Partnercontractdetailpage";
 import Statspage                 from "./pages/admin/Statspage";
 import Commissionpage            from "./pages/admin/Commissionpage";
+import Commissionrequestlistpage from "./pages/admin/Commissionrequestlistpage";
+import Branchtransferlistpage    from "./pages/admin/Branchtransferlistpage";
 
 // ===== User Pages =====
 import Usernewspage       from "./pages/user/pages/Usernewspage";
@@ -36,6 +38,7 @@ import Upgraderequestpage from "./pages/user/pages/Upgraderequestpage";
 import Partnercontractpage from "./pages/user/pages/Partnercontractpage";
 import Myprofilepage      from "./pages/user/pages/Myprofilepage";
 import Mystatspage        from "./pages/user/pages/Mystatspage";
+import Branchtransferpage from "./pages/user/pages/Branchtransferpage";
 
 // ===== Components =====
 import Header        from "./components/Header";
@@ -113,6 +116,10 @@ function App() {
         <Route path="customer-contracts/tao-moi"          element={<Customercontractcreate />} />
         <Route path="customer-contracts/:id"              element={<Customercontractdetail isAdmin />} />
 
+        {/* Yêu cầu chỉnh sửa hoa hồng & chuyển nhánh */}
+        <Route path="commission-requests" element={<Commissionrequestlistpage />} />
+        <Route path="branch-transfers"    element={<Branchtransferlistpage />} />
+
         {/* Thống kê */}
         <Route path="stats" element={<Statspage />} />
       </Route>
@@ -128,6 +135,9 @@ function App() {
 
         {/* Nâng cấp */}
         <Route path="/upgrade-requests"                   element={<Upgraderequestpage />} />
+
+        {/* Chuyển nhánh */}
+        <Route path="/branch-transfer"                    element={<Branchtransferpage />} />
 
         {/* Hợp đồng đối tác (user) */}
         <Route path="/partner-contract"                   element={<Partnercontractpage />} />

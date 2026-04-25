@@ -7,11 +7,16 @@ const fmt    = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
 const fmtPct = (n) => `${n || 0}%`;
 const PAGE_SIZE = 5;
 
-const getCommRate = (level = 1) => ({
+const DEFAULT_RATES = {
   1: { l1: 20, l2: 10, l3: 3 },
   2: { l1: 25, l2: 12, l3: 5 },
   3: { l1: 30, l2: 15, l3: 7 },
-}[level] || { l1: 20, l2: 10, l3: 3 });
+};
+// Ưu tiên rate đã override trên partner (do admin duyệt yêu cầu chỉnh sửa HH).
+const getCommRate = (partner) => {
+  if (partner?.commissionRates) return partner.commissionRates;
+  return DEFAULT_RATES[partner?.level] || DEFAULT_RATES[1];
+};
 
 function MiniPager({ total, page, onPage }) {
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -95,7 +100,7 @@ function CommissionPage() {
         if (!partner) throw new Error("Không tìm thấy đối tác");
         setPartner(partner);
 
-        const commRate = getCommRate(partner.level || 1);
+        const commRate = getCommRate(partner);
 
         // Cấp 1
         const myContracts = allContracts.filter(
@@ -157,7 +162,7 @@ function CommissionPage() {
   const totalL2  = level2Data.reduce((s,r) => s+r.commission, 0);
   const totalL3  = level3Data.reduce((s,r) => s+r.commission, 0);
   const total    = totalL1+totalL2+totalL3;
-  const commRate = getCommRate(partner?.level||1);
+  const commRate = getCommRate(partner);
 
   const slice1 = level1Data.slice((page1-1)*PAGE_SIZE, page1*PAGE_SIZE);
   const slice2 = level2Data.slice((page2-1)*PAGE_SIZE, page2*PAGE_SIZE);
