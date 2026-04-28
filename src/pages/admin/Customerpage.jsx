@@ -39,15 +39,16 @@ const getMaxId = async () => {
 };
 
 /* ─── Modal: Tạo / Sửa ──────────────────────────────────── */
-function CustomerModal({ initial, onClose, onSubmit, loading }) {
+function CustomerModal({ initial, onClose, onSubmit, loading, isAdmin, partners }) {
   const isEdit = !!initial?.id;
   const [form, setForm] = useState({
-    name:    initial?.name    ?? "",
-    phone:   initial?.phone   ?? "",
-    email:   initial?.email   ?? "",
-    address: initial?.address ?? "",
-    note:    initial?.note    ?? "",
-    status:  initial?.status  ?? "active",
+    name:        initial?.name    ?? "",
+    phone:       initial?.phone   ?? "",
+    email:       initial?.email   ?? "",
+    address:     initial?.address ?? "",
+    note:        initial?.note    ?? "",
+    status:      initial?.status  ?? "active",
+    ownerUserId: initial?.userId  ?? "",   // dùng cho admin chọn đối tác phụ trách
   });
   const [err, setErr] = useState("");
 
@@ -56,9 +57,15 @@ function CustomerModal({ initial, onClose, onSubmit, loading }) {
   const submit = () => {
     if (!form.name.trim())  return setErr("Tên khách hàng là bắt buộc.");
     if (!form.phone.trim()) return setErr("Số điện thoại là bắt buộc.");
+    if (isAdmin && !isEdit && !form.ownerUserId) {
+      return setErr("Vui lòng chọn đối tác phụ trách KH này.");
+    }
     setErr("");
     onSubmit(form);
   };
+
+  // Sắp xếp partners đã approved cho dropdown của admin
+  const approvedPartners = (partners || []).filter((p) => p.status === "approved");
 
   return (
     <div className="cc-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -74,7 +81,27 @@ function CustomerModal({ initial, onClose, onSubmit, loading }) {
         <div className="cc-modal-body">
           {err && <p className="cc-modal-err">{err}</p>}
 
-          <label className="cc-modal-label">Tên khách hàng <span className="cc-req">*</span></label>
+          {/* Admin tạo mới: chọn đối tác phụ trách */}
+          {isAdmin && !isEdit && (
+            <>
+              <label className="cc-modal-label">Đối tác phụ trách <span className="cc-req">*</span></label>
+              <select
+                className="cc-modal-select"
+                name="ownerUserId"
+                value={form.ownerUserId}
+                onChange={onChange}
+              >
+                <option value="">— Chọn đối tác —</option>
+                {approvedPartners.map((p) => (
+                  <option key={p.id} value={String(p.userId)}>
+                    {p.name} · DT{String(p.code || p.id).padStart(6, "0")}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+
+          <label className="cc-modal-label" style={{ marginTop: 12 }}>Tên khách hàng <span className="cc-req">*</span></label>
           <input className="cc-modal-select" name="name"  value={form.name}  onChange={onChange} placeholder="VD: Công ty TNHH ABC" />
 
           <label className="cc-modal-label" style={{ marginTop: 12 }}>Số điện thoại <span className="cc-req">*</span></label>
@@ -221,9 +248,12 @@ function Customerpage({ isAdmin = false }) {
     setModalLoading(true);
     try {
       const max = await getMaxId();
+      // Admin tạo: chỉ định đối tác phụ trách qua ownerUserId.
+      // User tạo: gán userId = mình.
+      const ownerUserId = isAdmin ? String(form.ownerUserId) : String(currentUser.id);
       const payload = {
         id: String(max + 1),
-        userId: String(currentUser.id),
+        userId: ownerUserId,
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
@@ -282,9 +312,7 @@ function Customerpage({ isAdmin = false }) {
           <h1>{isAdmin ? "Quản lý khách hàng" : "Khách hàng của tôi"}</h1>
           <p>{isAdmin ? "Toàn bộ khách hàng do đối tác trong hệ thống tạo" : "Khách hàng do bạn quản lý"}</p>
         </div>
-        {!isAdmin && (
-          <button className="cc-btn-create" onClick={() => setCreateOpen(true)}>+ Thêm KH</button>
-        )}
+        <button className="cc-btn-create" onClick={() => setCreateOpen(true)}>+ Thêm khách hàng</button>
       </div>
 
       <div className="cc-card">
@@ -402,6 +430,8 @@ function Customerpage({ isAdmin = false }) {
 
       {createOpen && (
         <CustomerModal
+          isAdmin={isAdmin}
+          partners={partners}
           onClose={() => setCreateOpen(false)}
           onSubmit={handleCreate}
           loading={modalLoading}
@@ -409,6 +439,8 @@ function Customerpage({ isAdmin = false }) {
       )}
       {editTarget && (
         <CustomerModal
+          isAdmin={isAdmin}
+          partners={partners}
           initial={editTarget}
           onClose={() => setEditTarget(null)}
           onSubmit={handleEdit}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
 import "./Orgchartpage.css";
 
@@ -181,6 +182,7 @@ function StatsTable({ rootNode, rootName }) {
    Page
 ══════════════════════════════════════════════ */
 function Orgchartpage() {
+  const navigate = useNavigate();
   const [allPartners, setAllPartners] = useState([]);
   const [loading,     setLoading    ] = useState(true);
   const [error,       setError      ] = useState("");
@@ -269,7 +271,7 @@ function Orgchartpage() {
         <div className="page-header-left">
           <h1>Sơ đồ đối tác hệ thống</h1>
         </div>
-        <button className="oc-btn-request">
+        <button className="oc-btn-request" onClick={() => navigate("/admin/branch-transfers")}>
           ☰ Danh sách yêu cầu chuyển nhánh
         </button>
       </div>

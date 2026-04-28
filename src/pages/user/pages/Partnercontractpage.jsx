@@ -337,6 +337,13 @@ function Partnercontractpage() {
               <button className="pcp-btn-edit" onClick={() => setShowCommModal(true)}>
                 Yêu cầu chỉnh sửa HH
               </button>
+              <button
+                className="pcp-btn-upgrade"
+                style={{ background: "#0f766e" }}
+                onClick={() => navigate("/my-commission")}
+              >
+                💰 Xem hoa hồng
+              </button>
               {canUpgrade && (
                 <button className="pcp-btn-upgrade" onClick={() => navigate("/upgrade-requests")}>
                   ⬆ Yêu cầu nâng cấp đối tác

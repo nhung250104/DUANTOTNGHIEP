@@ -43,6 +43,7 @@ import Mystatspage        from "./pages/user/pages/Mystatspage";
 import Branchtransferpage from "./pages/user/pages/Branchtransferpage";
 import Mycommissionpage   from "./pages/user/pages/Mycommissionpage";
 import Mypromotionpage    from "./pages/user/pages/Mypromotionpage";
+import Mytreepage         from "./pages/user/pages/Mytreepage";
 
 // ===== Components =====
 import Header        from "./components/Header";
@@ -151,6 +152,9 @@ function App() {
 
         {/* Khách hàng (user) */}
         <Route path="/khach-hang"                         element={<Customerpage />} />
+
+        {/* Sơ đồ cây user */}
+        <Route path="/my-tree"                            element={<Mytreepage />} />
 
         {/* Hoa hồng + lịch sử nâng cấp */}
         <Route path="/my-commission"                      element={<Mycommissionpage />} />

@@ -55,9 +55,18 @@ function Login() {
     setLoading(true);
 
     try {
-      /* ── Tìm user theo email ── */
-      const res  = await api.get(`/users?email=${encodeURIComponent(form.email)}`);
-      const list = Array.isArray(res.data) ? res.data : [];
+      /* ── Tìm user theo email — chuẩn hoá để tránh sai do paste có khoảng trắng ── */
+      const emailNorm = form.email.trim().toLowerCase();
+      const passInput = form.password.trim();
+      const res  = await api.get(`/users?email=${encodeURIComponent(emailNorm)}`);
+      let list   = Array.isArray(res.data) ? res.data : [];
+
+      // Fallback: query theo email đôi khi case-sensitive — match thủ công nếu trống
+      if (list.length === 0) {
+        const all = await api.get(`/users`);
+        list = (Array.isArray(all.data) ? all.data : [])
+          .filter((u) => (u.email || "").trim().toLowerCase() === emailNorm);
+      }
 
       if (list.length === 0) {
         setError("Email không tồn tại trong hệ thống.");
@@ -66,8 +75,9 @@ function Login() {
 
       const user = list[0];
 
-      /* ── Kiểm tra mật khẩu ── */
-      if (user.password !== form.password) {
+      /* ── Kiểm tra mật khẩu (so sánh sau khi trim cả 2 vế) ── */
+      const stored = (user.password || "").trim();
+      if (stored !== passInput) {
         setError("Mật khẩu không đúng.");
         return;
       }

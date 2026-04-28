@@ -340,10 +340,10 @@ function Register() {
 
       const newUser = {
         id:         String(maxUserId + 1),
-        name:       form.fullName,
-        email:      form.email,
-        phone:      form.phone,
-        password:   form.password,
+        name:       form.fullName.trim(),
+        email:      form.email.trim().toLowerCase(),
+        phone:      form.phone.trim(),
+        password:   form.password.trim(),
         role:       "Đối tác",
         memberType,
         status:     "pending_approval", // chờ admin duyệt

@@ -6,7 +6,7 @@
  *          (vẫn snapshot tên/SĐT/địa chỉ vào contract để các list cũ chạy được).
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../store/api";
 import customerService from "../../store/customerService";
@@ -30,6 +30,119 @@ const getNow = () => {
   const p = (n) => String(n).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
+
+/* ─── CustomerPicker: input search có dropdown lọc theo tên / mã / SĐT ─── */
+function CustomerPicker({ customers, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef = useRef();
+
+  const selected = customers.find((c) => String(c.id) === String(value));
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const onDoc = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter((c) => {
+      const hay = [c.name, c.phone, c.email, c.id].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [customers, query]);
+
+  const pick = (c) => {
+    onChange(c.id);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div className="cc-form-grid">
+      <div className="cc-field cc-field--full" ref={wrapRef} style={{ position: "relative" }}>
+        <label>Chọn khách hàng <span className="cc-req">*</span></label>
+        <input
+          className="cc-modal-select"
+          placeholder="Gõ tên, SĐT hoặc mã KH để tìm..."
+          value={open ? query : (selected ? `${selected.name}${selected.phone ? ` · ${selected.phone}` : ""}` : "")}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          autoComplete="off"
+        />
+        {selected && !open && (
+          <button
+            type="button"
+            onClick={() => { onChange(""); setQuery(""); setOpen(true); }}
+            style={{
+              position: "absolute", right: 8, top: 32,
+              border: "none", background: "transparent",
+              color: "#94a3b8", cursor: "pointer", fontSize: 16,
+            }}
+            title="Xoá lựa chọn"
+          >×</button>
+        )}
+
+        {open && (
+          <div style={{
+            position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4,
+            background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8,
+            maxHeight: 260, overflowY: "auto", zIndex: 50,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+          }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "12px 14px", fontSize: 13, color: "#94a3b8" }}>
+                Không tìm thấy khách hàng nào khớp "{query}". <Link to="/khach-hang" className="cc-link">Thêm KH mới</Link>
+              </div>
+            ) : (
+              filtered.map((c) => (
+                <button
+                  type="button"
+                  key={c.id}
+                  onClick={() => pick(c)}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "10px 14px", border: "none", background: "transparent",
+                    cursor: "pointer", fontSize: 13,
+                    borderBottom: "1px solid #f1f5f9",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#f8fafc"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <div style={{ fontWeight: 600, color: "#0f172a" }}>{c.name}</div>
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                    Mã KH: {c.id} {c.phone ? `· 📞 ${c.phone}` : ""} {c.email ? `· ✉️ ${c.email}` : ""}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        <p className="cc-field-hint">
+          Chưa có trong danh sách? <Link to="/khach-hang" className="cc-link">Thêm khách hàng mới</Link>
+        </p>
+      </div>
+
+      {selected && (
+        <div className="cc-field cc-field--full" style={{
+          background: "#f8fafc", border: "1px solid #e2e8f0",
+          borderRadius: 8, padding: 12, fontSize: 13, color: "#475569",
+          display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px",
+        }}>
+          <div>📞 {selected.phone || "—"}</div>
+          <div>✉️ {selected.email || "—"}</div>
+          <div style={{ gridColumn: "1 / -1" }}>📍 {selected.address || "—"}</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Customercontractcreate() {
   const navigate    = useNavigate();
@@ -165,8 +278,6 @@ function Customercontractcreate() {
     );
   }
 
-  const selectedCustomer = customers.find((c) => String(c.id) === String(form.customerId));
-
   return (
     <div className="cc-page">
       <div className="page-header">
@@ -191,34 +302,11 @@ function Customercontractcreate() {
                 Bạn chưa có khách hàng nào. <Link to="/khach-hang" className="cc-link">Thêm khách hàng tại đây</Link> rồi quay lại tạo hợp đồng.
               </div>
             ) : (
-              <div className="cc-form-grid">
-                <div className="cc-field cc-field--full">
-                  <label>Chọn khách hàng <span className="cc-req">*</span></label>
-                  <select className="cc-modal-select" name="customerId" value={form.customerId} onChange={onChange}>
-                    <option value="">— Chọn khách hàng —</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} {c.phone ? `· ${c.phone}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="cc-field-hint">
-                    Chưa có trong danh sách? <Link to="/khach-hang" className="cc-link">Thêm khách hàng mới</Link>
-                  </p>
-                </div>
-
-                {selectedCustomer && (
-                  <div className="cc-field cc-field--full" style={{
-                    background: "#f8fafc", border: "1px solid #e2e8f0",
-                    borderRadius: 8, padding: 12, fontSize: 13, color: "#475569",
-                    display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px",
-                  }}>
-                    <div>📞 {selectedCustomer.phone || "—"}</div>
-                    <div>✉️ {selectedCustomer.email || "—"}</div>
-                    <div style={{ gridColumn: "1 / -1" }}>📍 {selectedCustomer.address || "—"}</div>
-                  </div>
-                )}
-              </div>
+              <CustomerPicker
+                customers={customers}
+                value={form.customerId}
+                onChange={(id) => setForm((p) => ({ ...p, customerId: id }))}
+              />
             )}
 
             <h3 className="cc-section-title" style={{ marginTop: 24 }}>Thông tin hợp đồng</h3>
