@@ -30,6 +30,7 @@ import Statspage                 from "./pages/admin/Statspage";
 import Commissionpage            from "./pages/admin/Commissionpage";
 import Commissionrequestlistpage from "./pages/admin/Commissionrequestlistpage";
 import Branchtransferlistpage    from "./pages/admin/Branchtransferlistpage";
+import Customerpage              from "./pages/admin/Customerpage";
 
 // ===== User Pages =====
 import Usernewspage       from "./pages/user/pages/Usernewspage";
@@ -116,6 +117,9 @@ function App() {
         <Route path="customer-contracts/tao-moi"          element={<Customercontractcreate />} />
         <Route path="customer-contracts/:id"              element={<Customercontractdetail isAdmin />} />
 
+        {/* Quản lý khách hàng (admin) */}
+        <Route path="customers" element={<Customerpage isAdmin />} />
+
         {/* Yêu cầu chỉnh sửa hoa hồng & chuyển nhánh */}
         <Route path="commission-requests" element={<Commissionrequestlistpage />} />
         <Route path="branch-transfers"    element={<Branchtransferlistpage />} />
@@ -138,6 +142,9 @@ function App() {
 
         {/* Chuyển nhánh */}
         <Route path="/branch-transfer"                    element={<Branchtransferpage />} />
+
+        {/* Khách hàng (user) */}
+        <Route path="/khach-hang"                         element={<Customerpage />} />
 
         {/* Hợp đồng đối tác (user) */}
         <Route path="/partner-contract"                   element={<Partnercontractpage />} />

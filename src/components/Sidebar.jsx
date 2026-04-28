@@ -13,6 +13,7 @@ import {
   Users,
   Percent,
   Shuffle,
+  UserPlus,
 } from "lucide-react";
 
 /* ─── Menu theo role ─────────────────────────────────────── */
@@ -21,6 +22,7 @@ const ADMIN_MENU = [
   { path: "/admin/users",                icon: Users,      label: "Quản lý người dùng"       },
   { path: "/admin/stats",                icon: BarChart3,  label: "Thống kê"                 },
   { path: "/admin/partners",             icon: FolderOpen, label: "Hồ sơ đối tác"            },
+  { path: "/admin/customers",            icon: UserPlus,   label: "Quản lý khách hàng"       },
   { path: "/admin/orgchart",             icon: GitBranch,  label: "Sơ đồ cây"                },
   { path: "/admin/partner-contracts",    icon: FileCheck,  label: "Hợp đồng đối tác"         },
   { path: "/admin/customer-contracts",   icon: FileText,   label: "Hợp đồng Khách hàng"      },
@@ -33,6 +35,7 @@ const MEMBER_MENU = [
   { path: "/dashboard",           icon: LayoutDashboard, label: "Trang chủ"            },
   { path: "/my-profile",          icon: User,            label: "Thông tin cá nhân"    },
   { path: "/partner-contract",    icon: FolderOpen,      label: "Hồ sơ đối tác"        },
+  { path: "/khach-hang",          icon: UserPlus,        label: "Khách hàng"           },
   { path: "/upgrade-requests",    icon: GitBranch,       label: "Nâng cấp đối tác"     },
   { path: "/branch-transfer",     icon: Shuffle,         label: "Yêu cầu chuyển nhánh" },
   { path: "/hop-dong-doi-tac",    icon: FileCheck,       label: "Hợp đồng đối tác"     },

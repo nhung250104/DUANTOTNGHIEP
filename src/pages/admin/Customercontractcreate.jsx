@@ -1,15 +1,18 @@
 /**
- * src/pages/user/CustomerContractCreate.jsx
+ * src/pages/admin/Customercontractcreate.jsx
  *
- * Đối tác tạo HĐ khách hàng mới → admin duyệt
+ * Đối tác tạo HĐ khách hàng mới → admin duyệt.
+ * Phase 2: chọn khách hàng từ collection /customers thay vì nhập tay
+ *          (vẫn snapshot tên/SĐT/địa chỉ vào contract để các list cũ chạy được).
  */
 
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../../store/api";
-import useAuthStore from "../../store/authStore";
+import customerService from "../../store/customerService";
 import partnerService from "../../store/Partnerservice";
-import "./CustomerContractPage.css";
+import useAuthStore from "../../store/authStore";
+import "./Customercontractpage.css";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0);
 
@@ -33,30 +36,55 @@ function Customercontractcreate() {
   const currentUser = useAuthStore((s) => s.user);
   const fileRef     = useRef();
 
-  const [form, setForm] = useState({
-    customerName:    "",
-    customerTax:     "",
-    customerPhone:   "",
-    customerAddress: "",
-    signDate:        "",
-    expireDate:      "",
-    value:           "",
-  });
+  const [me,        setMe       ] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [bootError, setBootError] = useState("");
 
-  const [file,     setFile    ] = useState(null);
-  const [loading,  setLoading ] = useState(false);
-  const [error,    setError   ] = useState("");
+  const [form, setForm] = useState({
+    customerId: "",
+    signDate:   "",
+    expireDate: "",
+    value:      "",
+  });
+  const [file,    setFile   ] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError  ] = useState("");
+
+  /* ── Load partner của user + danh sách KH của họ ── */
+  useEffect(() => {
+    const boot = async () => {
+      if (!currentUser) return;
+      try {
+        const [pRes, cRes] = await Promise.all([
+          partnerService.getAll(),
+          customerService.getByUserId(String(currentUser.id)),
+        ]);
+        const pList = Array.isArray(pRes.data) ? pRes.data : [];
+        const found = pList.find(
+          (p) => p.userId === String(currentUser.id) || p.email === currentUser.email
+        );
+        if (!found) {
+          setBootError("Không tìm thấy hồ sơ đối tác của bạn. Vui lòng liên hệ admin.");
+          return;
+        }
+        setMe(found);
+        setCustomers(Array.isArray(cRes.data) ? cRes.data : []);
+      } catch (e) {
+        console.error(e);
+        setBootError("Không thể tải dữ liệu khởi tạo.");
+      }
+    };
+    boot();
+  }, [currentUser]);
 
   const onChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const validate = () => {
-    if (!form.customerName)    return "Vui lòng nhập tên khách hàng.";
-    if (!form.customerTax)     return "Vui lòng nhập mã số thuế.";
-    if (!form.customerPhone)   return "Vui lòng nhập số điện thoại khách hàng.";
-    if (!form.signDate)        return "Vui lòng chọn ngày ký.";
-    if (!form.expireDate)      return "Vui lòng chọn ngày hết hạn.";
-    if (!form.value || isNaN(Number(form.value.replace(/\D/g, "")))) return "Vui lòng nhập giá trị hợp đồng hợp lệ.";
-    if (!file)                 return "Vui lòng tải lên file hợp đồng.";
+    if (!form.customerId)  return "Vui lòng chọn khách hàng. Nếu chưa có, hãy tạo trước ở mục Khách hàng.";
+    if (!form.signDate)    return "Vui lòng chọn ngày ký.";
+    if (!form.expireDate)  return "Vui lòng chọn ngày hết hạn.";
+    if (!form.value)       return "Vui lòng nhập giá trị hợp đồng.";
+    if (!file)             return "Vui lòng tải lên file hợp đồng.";
     return null;
   };
 
@@ -67,21 +95,16 @@ function Customercontractcreate() {
     setError(""); setLoading(true);
 
     try {
-      // Lấy thông tin partner của user đang đăng nhập
-      const pRes  = await partnerService.getAll();
-      const pList = Array.isArray(pRes.data) ? pRes.data : [];
-      const me    = pList.find(
-        (p) => p.userId === String(currentUser?.id) || p.email === currentUser?.email
-      );
-      if (!me) { setError("Không tìm thấy hồ sơ đối tác của bạn."); setLoading(false); return; }
+      const customer = customers.find((c) => String(c.id) === String(form.customerId));
+      if (!customer) { setError("Khách hàng không hợp lệ."); setLoading(false); return; }
 
-      const rawValue      = Number(form.value.replace(/\D/g, ""));
-      const commission    = Math.round(rawValue * 0.1); // 10% mặc định
-      const maxId         = await getMaxId("customerContracts");
-      const code          = `HDKH${String(maxId + 1).padStart(6, "0")}`;
+      const rawValue   = Number(String(form.value).replace(/\D/g, ""));
+      const commission = Math.round(rawValue * 0.1); // 10% personal mặc định, admin có thể chỉnh sau
+      const maxId      = await getMaxId("customerContracts");
+      const code       = `HDKH${String(maxId + 1).padStart(6, "0")}`;
 
-      const [sy, sm, sd]  = form.signDate.split("-");
-      const [ey, em, ed]  = form.expireDate.split("-");
+      const [sy, sm, sd] = form.signDate.split("-");
+      const [ey, em, ed] = form.expireDate.split("-");
       const signDateFmt   = `${sd}/${sm}/${sy}`;
       const expireDateFmt = `${ed}/${em}/${ey}`;
 
@@ -91,10 +114,12 @@ function Customercontractcreate() {
         partnerId:       me.id,
         partnerCode:     `DT${me.code}`,
         partnerName:     me.name,
-        customerName:    form.customerName,
-        customerTax:     form.customerTax,
-        customerPhone:   form.customerPhone,
-        customerAddress: form.customerAddress,
+        // Reference + snapshot khách hàng
+        customerId:      String(customer.id),
+        customerName:    customer.name,
+        customerTax:     customer.tax || "",
+        customerPhone:   customer.phone || "",
+        customerAddress: customer.address || "",
         signDate:        signDateFmt,
         expireDate:      expireDateFmt,
         value:           rawValue,
@@ -108,13 +133,13 @@ function Customercontractcreate() {
 
       await api.post("/customerContracts", newContract);
 
-      // Thông báo cho admin
+      // Notification cho admin
       const maxNotiId = await getMaxId("notifications");
       await api.post("/notifications", {
         id:          String(maxNotiId + 1),
         type:        "new_customer_contract",
         title:       "Hợp đồng khách hàng mới chờ duyệt",
-        message:     `${me.name} vừa tạo hợp đồng ${code} với ${form.customerName}.`,
+        message:     `${me.name} vừa tạo hợp đồng ${code} với ${customer.name}.`,
         partnerId:   me.id,
         partnerName: me.name,
         read:        false,
@@ -130,13 +155,25 @@ function Customercontractcreate() {
     }
   };
 
+  if (bootError) {
+    return (
+      <div className="cc-page">
+        <div className="cc-error" style={{ marginTop: 24 }}>
+          ⚠️ {bootError}
+        </div>
+      </div>
+    );
+  }
+
+  const selectedCustomer = customers.find((c) => String(c.id) === String(form.customerId));
+
   return (
     <div className="cc-page">
       <div className="page-header">
         <div className="page-header-left">
           <button className="cc-btn-back-nav" onClick={() => navigate(-1)}>← Quay lại</button>
           <h1 style={{ marginTop: 8 }}>Tạo hợp đồng khách hàng</h1>
-          <p>Điền thông tin hợp đồng và tải lên file để gửi admin duyệt</p>
+          <p>Chọn khách hàng có sẵn và tải lên file hợp đồng để gửi admin duyệt</p>
         </div>
       </div>
 
@@ -147,26 +184,42 @@ function Customercontractcreate() {
 
           {/* ── Cột trái: thông tin ── */}
           <div className="cc-create-card">
-            <h3 className="cc-section-title">Thông tin khách hàng</h3>
+            <h3 className="cc-section-title">Khách hàng</h3>
 
-            <div className="cc-form-grid">
-              <div className="cc-field cc-field--full">
-                <label>Tên khách hàng / Công ty <span className="cc-req">*</span></label>
-                <input name="customerName" placeholder="VD: Công ty TNHH ABC" value={form.customerName} onChange={onChange} />
+            {customers.length === 0 ? (
+              <div className="cc-empty" style={{ padding: 16, background: "#fff7ed", color: "#9a3412", border: "1px dashed #fed7aa", borderRadius: 8 }}>
+                Bạn chưa có khách hàng nào. <Link to="/khach-hang" className="cc-link">Thêm khách hàng tại đây</Link> rồi quay lại tạo hợp đồng.
               </div>
-              <div className="cc-field">
-                <label>Mã số thuế <span className="cc-req">*</span></label>
-                <input name="customerTax" placeholder="012345678901" value={form.customerTax} onChange={onChange} />
+            ) : (
+              <div className="cc-form-grid">
+                <div className="cc-field cc-field--full">
+                  <label>Chọn khách hàng <span className="cc-req">*</span></label>
+                  <select className="cc-modal-select" name="customerId" value={form.customerId} onChange={onChange}>
+                    <option value="">— Chọn khách hàng —</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.phone ? `· ${c.phone}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="cc-field-hint">
+                    Chưa có trong danh sách? <Link to="/khach-hang" className="cc-link">Thêm khách hàng mới</Link>
+                  </p>
+                </div>
+
+                {selectedCustomer && (
+                  <div className="cc-field cc-field--full" style={{
+                    background: "#f8fafc", border: "1px solid #e2e8f0",
+                    borderRadius: 8, padding: 12, fontSize: 13, color: "#475569",
+                    display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px",
+                  }}>
+                    <div>📞 {selectedCustomer.phone || "—"}</div>
+                    <div>✉️ {selectedCustomer.email || "—"}</div>
+                    <div style={{ gridColumn: "1 / -1" }}>📍 {selectedCustomer.address || "—"}</div>
+                  </div>
+                )}
               </div>
-              <div className="cc-field">
-                <label>Số điện thoại <span className="cc-req">*</span></label>
-                <input name="customerPhone" type="tel" placeholder="0123456789" value={form.customerPhone} onChange={onChange} />
-              </div>
-              <div className="cc-field cc-field--full">
-                <label>Địa chỉ</label>
-                <input name="customerAddress" placeholder="Địa chỉ khách hàng" value={form.customerAddress} onChange={onChange} />
-              </div>
-            </div>
+            )}
 
             <h3 className="cc-section-title" style={{ marginTop: 24 }}>Thông tin hợp đồng</h3>
 
@@ -186,7 +239,6 @@ function Customercontractcreate() {
                   placeholder="VD: 50000000"
                   value={form.value}
                   onChange={(e) => {
-                    // Chỉ nhận số
                     const raw = e.target.value.replace(/\D/g, "");
                     setForm((p) => ({ ...p, value: raw }));
                   }}

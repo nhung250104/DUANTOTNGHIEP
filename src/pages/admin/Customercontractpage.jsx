@@ -18,6 +18,123 @@ const BASE = "http://localhost:3000";
 /* ─── Helpers ────────────────────────────────────────────── */
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
 
+const getNow = () => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+};
+
+const DEFAULT_RATES = {
+  1: { l1: 20, l2: 10, l3: 3 },
+  2: { l1: 25, l2: 12, l3: 5 },
+  3: { l1: 30, l2: 15, l3: 7 },
+};
+const ratesOf = (partner) =>
+  partner?.commissionRates || DEFAULT_RATES[partner?.level] || DEFAULT_RATES[1];
+
+const nextId = async (collection) => {
+  try {
+    const res  = await axios.get(`${BASE}/${collection}`);
+    const list = Array.isArray(res.data) ? res.data : [];
+    const ids  = list.map((x) => Number(x.id)).filter((n) => !isNaN(n));
+    return String((ids.length > 0 ? Math.max(...ids) : 0) + 1);
+  } catch { return "1"; }
+};
+
+/**
+ * Khi admin duyệt HĐ KH: ghi commissionHistory cho partner ký + cấp trên (F1, F2),
+ * cập nhật counter partner (contracts++, commission += personal), ghi systemLog.
+ */
+async function applyContractCommission(contract, adminUser) {
+  // 1. Lấy chuỗi partner: signing → parent → grandparent
+  const pRes = await axios.get(`${BASE}/partners`);
+  const partners = Array.isArray(pRes.data) ? pRes.data : [];
+  const findById = (id) => partners.find((p) => String(p.id) === String(id));
+
+  const signer = findById(contract.partnerId);
+  if (!signer) return;
+  const parent      = signer.parentId ? findById(signer.parentId) : null;
+  const grandparent = parent?.parentId ? findById(parent.parentId) : null;
+
+  const value = Number(contract.value) || 0;
+  const records = [];
+
+  // L1 — personal
+  const r1 = ratesOf(signer);
+  records.push({
+    receiver: signer,
+    type: "L1",
+    rate: r1.l1,
+    amount: Math.round(value * r1.l1 / 100),
+  });
+  // L2 — parent
+  if (parent) {
+    const r2 = ratesOf(parent);
+    records.push({
+      receiver: parent,
+      type: "L2",
+      rate: r2.l2,
+      amount: Math.round(value * r2.l2 / 100),
+    });
+  }
+  // L3 — grandparent
+  if (grandparent) {
+    const r3 = ratesOf(grandparent);
+    records.push({
+      receiver: grandparent,
+      type: "L3",
+      rate: r3.l3,
+      amount: Math.round(value * r3.l3 / 100),
+    });
+  }
+
+  // 2. POST commissionHistory
+  for (const r of records) {
+    const id = await nextId("commissionHistory");
+    await axios.post(`${BASE}/commissionHistory`, {
+      id,
+      partnerId:         String(r.receiver.id),
+      partnerName:       r.receiver.name,
+      sourcePartnerId:   String(signer.id),
+      sourcePartnerName: signer.name,
+      contractId:        String(contract.id),
+      contractCode:      contract.code,
+      contractValue:     value,
+      commissionType:    r.type,
+      rate:              r.rate,
+      commissionAmount:  r.amount,
+      createdAt:         getNow(),
+    });
+  }
+
+  // 3. Cập nhật counter cho từng partner nhận
+  for (const r of records) {
+    const cur = r.receiver;
+    const updated = {
+      ...cur,
+      // Chỉ tăng số HĐ ký cho L1 (signer); L2/L3 chỉ cộng tiền
+      contracts:  r.type === "L1" ? (cur.contracts || 0) + 1 : cur.contracts || 0,
+      commission: (cur.commission || 0) + r.amount,
+    };
+    await axios.put(`${BASE}/partners/${cur.id}`, updated);
+  }
+
+  // 4. systemLog
+  try {
+    const id = await nextId("systemLogs");
+    await axios.post(`${BASE}/systemLogs`, {
+      id,
+      type:        "approve_customer_contract",
+      actorId:     String(adminUser?.id || ""),
+      actorName:   adminUser?.name || "admin",
+      targetId:    String(contract.id),
+      targetType:  "customerContract",
+      description: `Duyệt HĐ ${contract.code} (${signer.name}, ${value.toLocaleString("vi-VN")} đ)`,
+      createdAt:   getNow(),
+    });
+  } catch { /* log lỗi không chặn flow */ }
+}
+
 const PAGE_SIZE = 10;
 
 const MONTHS      = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -253,6 +370,8 @@ function CustomerContractPage({ isAdmin = false }) {
     try {
       const updated = { ...approveTarget, status: "approved" };
       await axios.put(`${BASE}/customerContracts/${approveTarget.id}`, updated);
+      // Ghi commissionHistory + cập nhật counter partner + systemLog
+      await applyContractCommission(updated, currentUser);
       setContracts((prev) =>
         prev.map((c) => (c.id === approveTarget.id ? updated : c))
       );
@@ -277,6 +396,19 @@ function CustomerContractPage({ isAdmin = false }) {
         rejectDetail: detail,
       };
       await axios.put(`${BASE}/customerContracts/${rejectTarget.id}`, updated);
+      try {
+        const id = await nextId("systemLogs");
+        await axios.post(`${BASE}/systemLogs`, {
+          id,
+          type:        "reject_customer_contract",
+          actorId:     String(currentUser?.id || ""),
+          actorName:   currentUser?.name || "admin",
+          targetId:    String(updated.id),
+          targetType:  "customerContract",
+          description: `Từ chối HĐ ${updated.code}: ${reason}${detail ? ` — ${detail}` : ""}`,
+          createdAt:   getNow(),
+        });
+      } catch {/* log lỗi không chặn flow */}
       setContracts((prev) =>
         prev.map((c) => (c.id === rejectTarget.id ? updated : c))
       );
