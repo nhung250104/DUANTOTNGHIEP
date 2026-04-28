@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
+import useAuthStore from "../../store/authStore";
 import "./Orgchartpage.css";
 
 /* ══════════════════════════════════════════════
@@ -181,8 +182,14 @@ function StatsTable({ rootNode, rootName }) {
 /* ══════════════════════════════════════════════
    Page
 ══════════════════════════════════════════════ */
-function Orgchartpage() {
-  const navigate = useNavigate();
+/**
+ * Props:
+ *   userMode (bool): nếu true → tự khoá root vào partner của user đang đăng nhập,
+ *                    ẩn search box, đổi tiêu đề + button.
+ */
+function Orgchartpage({ userMode = false } = {}) {
+  const navigate    = useNavigate();
+  const currentUser = useAuthStore((s) => s.user);
   const [allPartners, setAllPartners] = useState([]);
   const [loading,     setLoading    ] = useState(true);
   const [error,       setError      ] = useState("");
@@ -210,6 +217,26 @@ function Orgchartpage() {
       }
     })();
   }, []);
+
+  /* ── User mode: tự chọn root theo user đang đăng nhập ── */
+  useEffect(() => {
+    if (!userMode || !currentUser || allPartners.length === 0) return;
+    const me = allPartners.find(
+      (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
+    );
+    if (me) {
+      setSearchText(me.name);
+      const map  = buildMap(allPartners);
+      const root = map[me.id];
+      if (root) {
+        assignRelLevel(root, 1);
+        const initialExpanded = new Set([root.id]);
+        (root.children || []).forEach((c) => initialExpanded.add(c.id));
+        setExpandedIds(initialExpanded);
+        setRootNode(root);
+      }
+    }
+  }, [userMode, currentUser, allPartners]);
 
   /* ── Build tree khi root thay đổi ── */
   const buildRoot = (partner) => {
@@ -264,51 +291,74 @@ function Orgchartpage() {
   /* ── Số cấp nhánh con options ── */
   const depthOptions = Array.from({ length: 10 }, (_, i) => i + 1);
 
+  // User INDEPENDENT (chỉ có ở userMode) → không có cây phân cấp
+  if (userMode && currentUser?.memberType === "INDEPENDENT") {
+    return (
+      <div className="oc-page">
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1>Sơ đồ cây của tôi</h1>
+          </div>
+        </div>
+        <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
+          Bạn đang hoạt động theo hình thức <strong>cá nhân (Independent)</strong>, không có sơ đồ phân cấp.
+          Nếu muốn tham gia hệ thống đội nhóm, vui lòng liên hệ admin.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="oc-page">
       {/* ── Header ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Sơ đồ đối tác hệ thống</h1>
+          <h1>{userMode ? "Sơ đồ cây của tôi" : "Sơ đồ đối tác hệ thống"}</h1>
+          {userMode && <p>Bạn và tuyến dưới trực tiếp (F1, F2, F3...)</p>}
         </div>
-        <button className="oc-btn-request" onClick={() => navigate("/admin/branch-transfers")}>
-          ☰ Danh sách yêu cầu chuyển nhánh
+        <button
+          className="oc-btn-request"
+          onClick={() => navigate(userMode ? "/branch-transfer" : "/admin/branch-transfers")}
+        >
+          ☰ {userMode ? "Yêu cầu chuyển nhánh" : "Danh sách yêu cầu chuyển nhánh"}
         </button>
       </div>
 
       {/* ── Filter card ── */}
       <div className="oc-filter-card">
-        {/* Search */}
-        <div className="oc-filter-row">
-          <label className="oc-filter-label">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            Tìm kiếm:
-          </label>
-          <div className="oc-search-wrap" ref={searchRef}>
-            <input
-              className="oc-search-input"
-              placeholder="Tìm kiếm theo tên hoặc mã đối tác..."
-              value={searchText}
-              onChange={(e) => { setSearchText(e.target.value); setShowDrop(true); }}
-              onFocus={() => setShowDrop(true)}
-            />
-            {showDrop && suggestions.length > 0 && (
-              <div className="oc-dropdown">
-                {suggestions.map((p) => (
-                  <div key={p.id} className="oc-dropdown-item" onMouseDown={() => handleSelect(p)}>
-                    <div>
-                      <span className="oc-dropdown-name">{p.name}</span>
-                      <span className="oc-dropdown-addr">{p.address || ""}</span>
+        {/* Search — chỉ admin mới thấy, user thì khoá root */}
+        {!userMode && (
+          <div className="oc-filter-row">
+            <label className="oc-filter-label">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Tìm kiếm:
+            </label>
+            <div className="oc-search-wrap" ref={searchRef}>
+              <input
+                className="oc-search-input"
+                placeholder="Tìm kiếm theo tên hoặc mã đối tác..."
+                value={searchText}
+                onChange={(e) => { setSearchText(e.target.value); setShowDrop(true); }}
+                onFocus={() => setShowDrop(true)}
+              />
+              {showDrop && suggestions.length > 0 && (
+                <div className="oc-dropdown">
+                  {suggestions.map((p) => (
+                    <div key={p.id} className="oc-dropdown-item" onMouseDown={() => handleSelect(p)}>
+                      <div>
+                        <span className="oc-dropdown-name">{p.name}</span>
+                        <span className="oc-dropdown-addr">{p.address || ""}</span>
+                      </div>
+                      <span className="oc-dropdown-meta">#{p.code} · Cấp {p.level}</span>
                     </div>
-                    <span className="oc-dropdown-meta">#{p.code} · Cấp {p.level}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Level + depth filters */}
         <div className="oc-filter-row">

@@ -12,6 +12,7 @@ import { useState, useEffect, useMemo } from "react";
 import api from "../../store/api";
 import customerService from "../../store/customerService";
 import useAuthStore from "../../store/authStore";
+import { notify } from "../../store/Notificationservice";
 import "./Customercontractpage.css";
 
 const PAGE_SIZE = 10;
@@ -263,6 +264,19 @@ function Customerpage({ isAdmin = false }) {
         createdAt: getNow(),
       };
       await customerService.create(payload);
+
+      // Nếu admin tạo cho đối tác khác → notify đối tác đó
+      if (isAdmin && ownerUserId !== String(currentUser.id)) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: ownerUserId,
+          type:            "customer_assigned",
+          title:           "Bạn được giao một khách hàng mới",
+          message:         `Admin vừa thêm khách hàng "${payload.name}" vào danh sách của bạn. Vào mục Khách hàng để bắt đầu chăm sóc.`,
+          link:            "/khach-hang",
+        });
+      }
+
       setCustomers((prev) => [...prev, payload]);
       setCreateOpen(false);
     } catch (e) {

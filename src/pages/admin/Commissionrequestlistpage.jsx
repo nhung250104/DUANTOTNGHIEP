@@ -11,6 +11,7 @@
 
 import { useState, useEffect } from "react";
 import api from "../../store/api";
+import { notify } from "../../store/Notificationservice";
 import "./Customercontractpage.css";
 
 const PAGE_SIZE = 10;
@@ -180,6 +181,21 @@ function Commissionrequestlistpage() {
       }
       const updated = { ...approveTarget, status: "approved", processedAt: getNow() };
       await api.put(`/commissionRequests/${approveTarget.id}`, updated);
+
+      // Notify user
+      if (partner?.userId) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: partner.userId,
+          type:            "commission_approved",
+          title:           "Yêu cầu chỉnh sửa hoa hồng được duyệt",
+          message:         `Tỉ lệ HH mới: L1 ${updated.requestedL1 ?? updated.currentL1}% / L2 ${updated.requestedL2 ?? updated.currentL2}% / L3 ${updated.requestedL3 ?? updated.currentL3}%`,
+          link:            "/partner-contract",
+          partnerId:       approveTarget.partnerId,
+          partnerName:     approveTarget.partnerName,
+        });
+      }
+
       setRequests((prev) => prev.map((r) => (r.id === approveTarget.id ? updated : r)));
       setApproveTarget(null);
     } catch (e) {
@@ -201,6 +217,25 @@ function Commissionrequestlistpage() {
         processedAt:  getNow(),
       };
       await api.put(`/commissionRequests/${rejectTarget.id}`, updated);
+
+      // Notify user
+      try {
+        const pRes = await api.get(`/partners/${rejectTarget.partnerId}`);
+        const partner = pRes.data;
+        if (partner?.userId) {
+          await notify({
+            recipientType:   "user",
+            recipientUserId: partner.userId,
+            type:            "commission_rejected",
+            title:           "Yêu cầu chỉnh sửa hoa hồng bị từ chối",
+            message:         `Lý do: ${reason}${detail ? ` — ${detail}` : ""}`,
+            link:            "/partner-contract",
+            partnerId:       rejectTarget.partnerId,
+            partnerName:     rejectTarget.partnerName,
+          });
+        }
+      } catch { /* ignore */ }
+
       setRequests((prev) => prev.map((r) => (r.id === rejectTarget.id ? updated : r)));
       setRejectTarget(null);
     } catch (e) {

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
 import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
+import { notify } from "../../store/Notificationservice";
 import "./Partnerprofilepage.css";
 
 const PAGE_SIZE = 17;
@@ -282,6 +283,21 @@ function Partnerprofilepage() {
         )
       );
 
+      // 5. Notify user
+      const targetUserId = partner.userId; // có thể vừa được set ở step 3
+      if (targetUserId) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: targetUserId,
+          type:            "partner_approved",
+          title:           "Hồ sơ đối tác đã được duyệt",
+          message:         "Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập và bắt đầu sử dụng hệ thống.",
+          link:            "/partner-contract",
+          partnerId:       partner.id,
+          partnerName:     partner.name,
+        });
+      }
+
       alert(`✅ Đã duyệt hồ sơ "${partner.name}" thành công!`);
     } catch (err) {
       console.error(err);
@@ -295,6 +311,19 @@ function Partnerprofilepage() {
   const handleReject = async (partner) => {
     if (!window.confirm(`Xác nhận từ chối hồ sơ của "${partner.name}"?`)) return;
     try {
+      // Notify trước khi xoá user (vì sau đó không còn target để gửi)
+      if (partner.userId) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: partner.userId,
+          type:            "partner_rejected",
+          title:           "Hồ sơ đối tác bị từ chối",
+          message:         `Hồ sơ của ${partner.name} đã bị từ chối. Vui lòng liên hệ admin để biết thêm chi tiết.`,
+          partnerId:       partner.id,
+          partnerName:     partner.name,
+        });
+      }
+
       // Xoá partner
       await partnerService.delete(partner.id);
 
@@ -371,6 +400,20 @@ function Partnerprofilepage() {
         console.warn("Không ghi được promotionHistory/systemLog:", e);
       }
 
+      // Notify user (đối tác)
+      if (partner?.userId) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: partner.userId,
+          type:            "upgrade_approved",
+          title:           `Bạn đã được nâng lên Cấp ${nextLevel}`,
+          message:         `Yêu cầu nâng cấp của bạn đã được duyệt. Tỉ lệ hoa hồng và quyền lợi mới sẽ áp dụng từ hôm nay.`,
+          link:            "/my-promotion",
+          partnerId:       req.partnerId,
+          partnerName:     req.partnerName,
+        });
+      }
+
       setUpgradeRequests((prev) =>
         prev.map((r) =>
           r.id === req.id ? { ...r, status: "approved", contractFile: file.name } : r
@@ -400,6 +443,24 @@ function Partnerprofilepage() {
         status:     "rejected",
         rejectedAt: new Date().toLocaleDateString("vi-VN"),
       });
+      // Notify user
+      try {
+        const pRes = await partnerService.getById(req.partnerId);
+        const partner = Array.isArray(pRes.data) ? pRes.data[0] : pRes.data;
+        if (partner?.userId) {
+          await notify({
+            recipientType:   "user",
+            recipientUserId: partner.userId,
+            type:            "upgrade_rejected",
+            title:           "Yêu cầu nâng cấp bị từ chối",
+            message:         `Yêu cầu nâng cấp lên Cấp ${(req.currentLevel || 1) + 1} của bạn đã bị từ chối. Vui lòng liên hệ admin để biết lý do.`,
+            link:            "/upgrade-requests",
+            partnerId:       req.partnerId,
+            partnerName:     req.partnerName,
+          });
+        }
+      } catch { /* ignore */ }
+
       setUpgradeRequests((prev) =>
         prev.map((r) => r.id === req.id ? { ...r, status: "rejected" } : r)
       );

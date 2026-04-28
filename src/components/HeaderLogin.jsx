@@ -3,18 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import "./Header.css";
 import logoImg from "../assets/logo.jpg";
 import useAuthStore from "../store/authStore";
+import NotificationBell from "./Notificationbell";
 
 const HeaderLogin = () => {
-  const navigate        = useNavigate();
-  const [open, setOpen]         = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
+  const navigate    = useNavigate();
+  const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const notifRef    = useRef(null);
 
   const user      = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const isAdmin   = user?.role?.toLowerCase() === "admin";
 
-  const name = user?.name || user?.email || "Admin";
+  const name = user?.name || user?.email || "User";
 
   const initials = name
     .split(" ")
@@ -27,9 +27,6 @@ const HeaderLogin = () => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setOpen(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setNotifOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -52,29 +49,8 @@ const HeaderLogin = () => {
       {/* ── Bên phải: chuông + user ── */}
       <div className="hl-right">
 
-        {/* Chuông thông báo */}
-        <div className="hl-notif" ref={notifRef}>
-          <button
-            className="hl-notif-btn"
-            onClick={() => { setNotifOpen(o => !o); setOpen(false); }}
-          >
-            🔔
-            <span className="hl-notif-badge">1</span>
-          </button>
-
-          {notifOpen && (
-            <div className="hl-notif-dropdown">
-              <p className="hl-notif-title">Thông báo</p>
-              <div className="hl-notif-item">
-                <span>📋</span>
-                <div>
-                  <p>Có 1 đối tác mới chờ duyệt</p>
-                  <span>5 phút trước</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Chuông thông báo (lọc theo recipient của user đang đăng nhập) */}
+        <NotificationBell />
 
         {/* User avatar + tên + dropdown */}
         <div className="hl-user" ref={dropdownRef}>
@@ -110,9 +86,20 @@ const HeaderLogin = () => {
 
               <div className="hl-divider" />
 
-              <Link to="/admin/account"    className="hl-dropdown-item" onClick={() => setOpen(false)}>👤 Thông tin cá nhân</Link>
-              <Link to="/admin/news" className="hl-dropdown-item" onClick={() => setOpen(false)}>📊 Quản lý</Link>
-              <Link to="/settings"   className="hl-dropdown-item" onClick={() => setOpen(false)}>⚙️ Cài đặt</Link>
+              <Link
+                to={isAdmin ? "/admin/account" : "/my-profile"}
+                className="hl-dropdown-item"
+                onClick={() => setOpen(false)}
+              >
+                👤 Thông tin cá nhân
+              </Link>
+              <Link
+                to={isAdmin ? "/admin/news" : "/dashboard"}
+                className="hl-dropdown-item"
+                onClick={() => setOpen(false)}
+              >
+                📊 {isAdmin ? "Quản lý" : "Trang chủ"}
+              </Link>
 
               <div className="hl-divider" />
 

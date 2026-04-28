@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from "react";
 import api from "../../store/api";
+import { notify } from "../../store/Notificationservice";
 import "./Customercontractpage.css";
 
 const PAGE_SIZE = 10;
@@ -171,6 +172,21 @@ function Branchtransferlistpage() {
       });
       const updated = { ...approveTarget, status: "approved", processedAt: getNow() };
       await api.put(`/branchTransferRequests/${approveTarget.id}`, updated);
+
+      // Notify user
+      if (partner?.userId) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: partner.userId,
+          type:            "branch_transfer_approved",
+          title:           "Yêu cầu chuyển nhánh được duyệt",
+          message:         `Cấp trên mới của bạn: ${approveTarget.newParentName} (${approveTarget.newParentCode}).`,
+          link:            "/my-tree",
+          partnerId:       approveTarget.partnerId,
+          partnerName:     approveTarget.partnerName,
+        });
+      }
+
       setRequests((prev) => prev.map((r) => (r.id === approveTarget.id ? updated : r)));
       setApproveTarget(null);
     } catch (e) {
@@ -192,6 +208,25 @@ function Branchtransferlistpage() {
         processedAt:  getNow(),
       };
       await api.put(`/branchTransferRequests/${rejectTarget.id}`, updated);
+
+      // Notify user
+      try {
+        const pRes = await api.get(`/partners/${rejectTarget.partnerId}`);
+        const partner = pRes.data;
+        if (partner?.userId) {
+          await notify({
+            recipientType:   "user",
+            recipientUserId: partner.userId,
+            type:            "branch_transfer_rejected",
+            title:           "Yêu cầu chuyển nhánh bị từ chối",
+            message:         `Lý do: ${reason}${detail ? ` — ${detail}` : ""}`,
+            link:            "/branch-transfer",
+            partnerId:       rejectTarget.partnerId,
+            partnerName:     rejectTarget.partnerName,
+          });
+        }
+      } catch { /* ignore */ }
+
       setRequests((prev) => prev.map((r) => (r.id === rejectTarget.id ? updated : r)));
       setRejectTarget(null);
     } catch (e) {

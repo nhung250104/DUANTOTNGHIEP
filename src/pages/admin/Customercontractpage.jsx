@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useAuthStore from "../../store/authStore";
+import { notify } from "../../store/Notificationservice";
 import "./CustomerContractPage.css";
 
 /* ─── API base ───────────────────────────────────────────── */
@@ -372,6 +373,25 @@ function CustomerContractPage({ isAdmin = false }) {
       await axios.put(`${BASE}/customerContracts/${approveTarget.id}`, updated);
       // Ghi commissionHistory + cập nhật counter partner + systemLog
       await applyContractCommission(updated, currentUser);
+
+      // Notify đối tác sở hữu HĐ
+      try {
+        const pRes = await axios.get(`${BASE}/partners/${approveTarget.partnerId}`);
+        const partner = pRes.data;
+        if (partner?.userId) {
+          await notify({
+            recipientType:   "user",
+            recipientUserId: partner.userId,
+            type:            "customer_contract_approved",
+            title:           `HĐ ${approveTarget.code} đã được duyệt`,
+            message:         `Hợp đồng với khách hàng "${approveTarget.customerName}" đã hiệu lực. Hoa hồng tương ứng đã được cộng vào tài khoản.`,
+            link:            "/my-commission",
+            partnerId:       approveTarget.partnerId,
+            partnerName:     approveTarget.partnerName,
+          });
+        }
+      } catch { /* ignore */ }
+
       setContracts((prev) =>
         prev.map((c) => (c.id === approveTarget.id ? updated : c))
       );
@@ -409,6 +429,24 @@ function CustomerContractPage({ isAdmin = false }) {
           createdAt:   getNow(),
         });
       } catch {/* log lỗi không chặn flow */}
+
+      // Notify đối tác về việc HĐ bị từ chối
+      try {
+        const pRes = await axios.get(`${BASE}/partners/${updated.partnerId}`);
+        const partner = pRes.data;
+        if (partner?.userId) {
+          await notify({
+            recipientType:   "user",
+            recipientUserId: partner.userId,
+            type:            "customer_contract_rejected",
+            title:           `HĐ ${updated.code} bị từ chối`,
+            message:         `Lý do: ${reason}${detail ? ` — ${detail}` : ""}`,
+            link:            "/hop-dong-khach-hang",
+            partnerId:       updated.partnerId,
+            partnerName:     updated.partnerName,
+          });
+        }
+      } catch { /* ignore */ }
       setContracts((prev) =>
         prev.map((c) => (c.id === rejectTarget.id ? updated : c))
       );
