@@ -24,6 +24,160 @@ const getMaxId = async (collection) => {
 };
 
 /* ─── Modal: Yêu cầu chỉnh sửa hoa hồng ────────────────── */
+/* ─── Modal: Yêu cầu tham gia đội nhóm (cho INDEPENDENT) ────────────── */
+const extractCode = (input = "") => {
+  const t = input.trim();
+  const m = t.match(/\/ref\/([^/?#\s]+)/);
+  if (m) return m[1];
+  if (t.includes("/")) {
+    const parts = t.split("/").filter(Boolean);
+    return parts[parts.length - 1];
+  }
+  return t;
+};
+
+function JoinTeamModal({ partner, onClose, onSubmitted }) {
+  const [newParentInput, setNewParentInput] = useState("");
+  const [foundParent,    setFoundParent   ] = useState(null);
+  const [lookup,         setLookup        ] = useState("idle"); // idle|loading|found|not_found|invalid
+  const [reason,         setReason        ] = useState("");
+  const [err,            setErr           ] = useState("");
+  const [loading,        setLoading       ] = useState(false);
+
+  /* Lookup parent (debounce 500ms) */
+  useEffect(() => {
+    const raw = newParentInput.trim();
+    if (!raw) { setLookup("idle"); setFoundParent(null); return; }
+    setLookup("loading");
+    setFoundParent(null);
+    const t = setTimeout(async () => {
+      const code = extractCode(raw);
+      if (!code) { setLookup("not_found"); return; }
+      try {
+        const res = await api.get(`/partners?code=${code}&status=approved`);
+        const list = Array.isArray(res.data) ? res.data : [];
+        const found = list[0] || null;
+        if (!found) { setLookup("not_found"); return; }
+        if ((found.level || 1) < 2) { setLookup("invalid"); setFoundParent(found); return; }
+        setFoundParent(found);
+        setLookup("found");
+      } catch { setLookup("not_found"); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [newParentInput]);
+
+  const handleSubmit = async () => {
+    if (!reason.trim()) { setErr("Vui lòng nhập lý do."); return; }
+    if (newParentInput.trim() && lookup !== "found") {
+      setErr("Mã/link cấp trên đề xuất không hợp lệ. Bỏ trống để admin tự chọn.");
+      return;
+    }
+    setErr(""); setLoading(true);
+    try {
+      const maxId = await getMaxId("joinTeamRequests");
+      const payload = {
+        id:               String(maxId + 1),
+        partnerId:        String(partner.id),
+        partnerCode:      `DT${String(partner.code || partner.id).padStart(6, "0")}`,
+        partnerName:      partner.name,
+        newParentId:      foundParent ? String(foundParent.id) : null,
+        newParentName:    foundParent?.name || null,
+        newParentCode:    foundParent ? `DT${String(foundParent.code || foundParent.id).padStart(6, "0")}` : null,
+        reason:           reason.trim(),
+        status:           "pending",
+        createdAt:        getNow(),
+        processedAt:      null,
+        rejectReason:     null,
+      };
+      await api.post("/joinTeamRequests", payload);
+
+      // Notify admin (legacy without recipientType — bell admin còn nhận)
+      const maxNoti = await getMaxId("notifications");
+      await api.post("/notifications", {
+        id:          String(maxNoti + 1),
+        type:        "join_team_request",
+        title:       "Yêu cầu tham gia đội nhóm",
+        message:     `${partner.name} (Independent) xin chuyển sang chế độ đội nhóm${foundParent ? ` dưới cấp trên ${foundParent.name}` : ""}.`,
+        partnerId:   String(partner.id),
+        partnerName: partner.name,
+        read:        false,
+        createdAt:   getNow(),
+      });
+
+      onSubmitted();
+    } catch (e) {
+      console.error(e);
+      setErr("Gửi yêu cầu thất bại.");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="pcp-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pcp-modal">
+        <div className="pcp-modal-header">
+          <span className="pcp-modal-icon">🤝</span>
+          <div>
+            <h3 className="pcp-modal-title">Yêu cầu tham gia đội nhóm</h3>
+            <p className="pcp-modal-sub">Chuyển từ "Hoạt động riêng lẻ" sang chế độ đội nhóm có cấp trên</p>
+          </div>
+        </div>
+
+        <div className="pcp-modal-body">
+          {err && <p className="pcp-modal-err">{err}</p>}
+
+          <label className="pcp-modal-label">
+            Mã hoặc link cấp trên đề xuất <span style={{ color: "#94a3b8", fontWeight: 400 }}>(không bắt buộc)</span>
+          </label>
+          <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px" }}>
+            Bỏ trống để admin tự chọn cấp trên cho bạn.
+          </p>
+          <input
+            className="pcp-modal-input"
+            style={{ maxWidth: "none", width: "100%", boxSizing: "border-box" }}
+            placeholder="Ví dụ: 000003 hoặc sivip.vn/ref/000003"
+            value={newParentInput}
+            onChange={(e) => setNewParentInput(e.target.value)}
+            autoComplete="off"
+          />
+          {lookup !== "idle" && (
+            <div style={{
+              marginTop: 8, padding: "8px 12px", borderRadius: 6, fontSize: 12,
+              background: lookup === "found" ? "#f0fdf4" : lookup === "loading" ? "#f8fafc" : "#fff5f5",
+              color:      lookup === "found" ? "#166534" : lookup === "loading" ? "#64748b" : "#b91c1c",
+              border:     `1px solid ${lookup === "found" ? "#bbf7d0" : lookup === "loading" ? "#e2e8f0" : "#fecaca"}`,
+            }}>
+              {lookup === "loading"   && "🔍 Đang tìm..."}
+              {lookup === "not_found" && "❌ Không tìm thấy đối tác phù hợp."}
+              {lookup === "invalid"   && "⚠️ Đối tác chưa đủ điều kiện làm cấp trên (yêu cầu Cấp 2 trở lên)."}
+              {lookup === "found" && foundParent && (
+                <>✅ {foundParent.name} · {foundParent.levelLabel || `Cấp ${foundParent.level}`} · Mã: {foundParent.code}</>
+              )}
+            </div>
+          )}
+
+          <label className="pcp-modal-label" style={{ marginTop: 14 }}>
+            Lý do <span style={{ color: "#e53e3e" }}>*</span>
+          </label>
+          <textarea
+            className="pcp-modal-textarea"
+            placeholder="Trình bày lý do bạn muốn tham gia đội nhóm..."
+            rows={4}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </div>
+
+        <div className="pcp-modal-footer">
+          <button className="pcp-modal-btn-cancel" onClick={onClose} disabled={loading}>✕ Hủy</button>
+          <button className="pcp-modal-btn-send" onClick={handleSubmit} disabled={loading}>
+            {loading ? "Đang gửi..." : "✓ Gửi yêu cầu"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CommissionRequestModal({ partner, currentRates, onClose, onSubmitted }) {
   const [form, setForm] = useState({
     requestedL1: currentRates.l1,
@@ -234,6 +388,7 @@ function Partnercontractpage() {
   const [error,   setError  ] = useState("");
 
   const [showCommModal, setShowCommModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [submitDone,    setSubmitDone   ] = useState(false);
 
   // ── Fetch partner theo user đang đăng nhập ──────────────────
@@ -290,6 +445,7 @@ function Partnercontractpage() {
   const commission   = getCommissionRates(partner);
   const contractCode = `HDDT${String(partner.id).padStart(6, "0")}`;
   const canUpgrade   = (partner.level || 1) < 3;
+  const isIndependent = partner.memberType === "INDEPENDENT";
 
   return (
     <div className="pcp-page">
@@ -305,6 +461,25 @@ function Partnercontractpage() {
           <div>
             <p className="pcp-hero-name">{partner.name}</p>
             <p className="pcp-hero-code">#{partner.code || String(partner.id).padStart(6, "0")}</p>
+            {/* Hiển thị "Diện" để user biết mình đang ở trạng thái nào */}
+            {(() => {
+              const cls = partner.memberType === "INDEPENDENT" && !partner.parentId
+                ? { label: "Tự do hoạt động riêng lẻ", color: "#0ea5e9" }
+                : !partner.parentId
+                  ? { label: "Tự do chờ xếp nhánh",     color: "#f97316" }
+                  : { label: "Đã có cấp trên",          color: "#16a34a" };
+              return (
+                <span style={{
+                  display: "inline-block", marginTop: 6,
+                  padding: "3px 10px", borderRadius: 999,
+                  fontSize: 11, fontWeight: 600,
+                  background: cls.color + "1A", color: cls.color,
+                  border: `1px solid ${cls.color}40`,
+                }}>
+                  {cls.label}
+                </span>
+              );
+            })()}
           </div>
         </div>
         <div className="pcp-hero-right">
@@ -344,7 +519,16 @@ function Partnercontractpage() {
               >
                 💰 Xem hoa hồng
               </button>
-              {canUpgrade && (
+              {/* INDEPENDENT: nút yêu cầu tham gia đội nhóm thay cho nâng cấp */}
+              {isIndependent ? (
+                <button
+                  className="pcp-btn-upgrade"
+                  style={{ background: "#0ea5e9" }}
+                  onClick={() => setShowJoinModal(true)}
+                >
+                  🤝 Yêu cầu tham gia đội nhóm
+                </button>
+              ) : canUpgrade && (
                 <button className="pcp-btn-upgrade" onClick={() => navigate("/upgrade-requests")}>
                   ⬆ Yêu cầu nâng cấp đối tác
                 </button>
@@ -401,6 +585,18 @@ function Partnercontractpage() {
           onClose={() => setShowCommModal(false)}
           onSubmitted={() => {
             setShowCommModal(false);
+            setSubmitDone(true);
+            setTimeout(() => setSubmitDone(false), 5000);
+          }}
+        />
+      )}
+
+      {showJoinModal && (
+        <JoinTeamModal
+          partner={partner}
+          onClose={() => setShowJoinModal(false)}
+          onSubmitted={() => {
+            setShowJoinModal(false);
             setSubmitDone(true);
             setTimeout(() => setSubmitDone(false), 5000);
           }}

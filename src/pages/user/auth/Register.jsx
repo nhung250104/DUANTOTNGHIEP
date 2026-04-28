@@ -313,14 +313,11 @@ function Register() {
     if (form.password !== form.confirmPassword) return "Mật khẩu xác nhận không khớp.";
     if (!cccdFront)         return "Vui lòng tải ảnh mặt trước CCCD/Hộ chiếu.";
     if (!cccdBack)          return "Vui lòng tải ảnh mặt sau CCCD/Hộ chiếu.";
-    // Nếu đã nhập link giới thiệu nhưng chưa tìm thấy / không hợp lệ
-    if (form.referralLink.trim() && referrerStatus === "loading") return "Đang kiểm tra link giới thiệu, vui lòng đợi.";
-    if (form.referralLink.trim() && referrerStatus === "not_found") return "Link giới thiệu không hợp lệ.";
+    // Mã giới thiệu KHÔNG bắt buộc — bỏ trống = vào diện "tự do chờ xếp nhánh".
+    // Chỉ validate khi user đã gõ thứ gì đó vào ô để bảo đảm hợp lệ.
+    if (form.referralLink.trim() && referrerStatus === "loading")       return "Đang kiểm tra link giới thiệu, vui lòng đợi.";
+    if (form.referralLink.trim() && referrerStatus === "not_found")     return "Link giới thiệu không hợp lệ.";
     if (form.referralLink.trim() && referrerStatus === "invalid_level") return "Người giới thiệu chưa đủ điều kiện (yêu cầu từ Cấp 2 trở lên).";
-    // Đội nhóm thì bắt buộc phải có người giới thiệu hợp lệ (trừ khi đăng ký cá nhân)
-    if (form.activityType === "team" && !referrer && form.referralLink.trim() === "") {
-      return "Bạn chọn 'Hoạt động đội nhóm' nhưng chưa có mã/link người giới thiệu hợp lệ.";
-    }
     return null;
   };
 
@@ -523,9 +520,15 @@ function Register() {
                   </div>
                 </div>
 
-                {/* ── Link giới thiệu + preview ── */}
+                {/* ── Link giới thiệu (không bắt buộc) ── */}
                 <div className="pf-field" style={{ display: form.activityType === "individual" ? "none" : "" }}>
-                  <label>Mã hoặc link người giới thiệu</label>
+                  <label>
+                    Mã hoặc link người giới thiệu <span style={{ color: "#94a3b8", fontWeight: 400 }}>(không bắt buộc)</span>
+                  </label>
+                  <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px" }}>
+                    Bỏ trống nếu chưa có. Sau khi admin duyệt, bạn sẽ vào diện
+                    <strong> "Tự do chờ xếp nhánh"</strong> và admin sẽ tự gắn cấp trên cho bạn.
+                  </p>
                   <div style={{ position: "relative" }}>
                     <input
                       name="referralLink"

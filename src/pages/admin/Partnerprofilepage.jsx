@@ -94,6 +94,23 @@ function UpgradeApproveModal({ req, onClose, onSubmit }) {
 /* ══════════════════════════════════════════════
    Reusable table
 ══════════════════════════════════════════════ */
+/**
+ * classify(partner) → loại "diện" hiển thị cho admin:
+ *   - INDEPENDENT, parentId=null   → "Tự do hoạt động riêng lẻ"
+ *   - NORMAL,      parentId=null   → "Tự do chờ xếp nhánh"
+ *   - khác (NORMAL/PARTNER có parent) → "Đã có cấp trên"
+ */
+function classifyPartner(p) {
+  const mt = p.memberType || "NORMAL";
+  if (mt === "INDEPENDENT" && !p.parentId) {
+    return { key: "independent", label: "Tự do riêng lẻ", color: "#0ea5e9" };
+  }
+  if (mt === "NORMAL" && !p.parentId) {
+    return { key: "awaiting", label: "Chờ xếp nhánh", color: "#f97316" };
+  }
+  return { key: "in_tree", label: "Đã có cấp trên", color: "#16a34a" };
+}
+
 function PartnerTable({ data, onRowClick, extraColumns = [] }) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(data.length / PAGE_SIZE);
@@ -110,30 +127,45 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
               <th>Họ và tên</th>
               <th>Số điện thoại</th>
               <th>Địa chỉ</th>
+              <th>Diện</th>
               {extraColumns.map((c) => <th key={c.key}>{c.label}</th>)}
             </tr>
           </thead>
           <tbody>
             {pageData.length === 0 ? (
               <tr>
-                <td colSpan={5 + extraColumns.length} className="pp-empty">
+                <td colSpan={6 + extraColumns.length} className="pp-empty">
                   Không có dữ liệu
                 </td>
               </tr>
-            ) : pageData.map((row, idx) => (
-              <tr key={row.id} className="pp-row" onClick={() => onRowClick?.(row.id)}>
-                <td>{(page - 1) * PAGE_SIZE + idx + 1}</td>
-                <td>{row.code}</td>
-                <td>{row.name}</td>
-                <td>{row.phone}</td>
-                <td>{row.address}</td>
-                {extraColumns.map((c) => (
-                  <td key={c.key} onClick={(e) => e.stopPropagation()}>
-                    {c.render(row)}
+            ) : pageData.map((row, idx) => {
+              const cls = classifyPartner(row);
+              return (
+                <tr key={row.id} className="pp-row" onClick={() => onRowClick?.(row.id)}>
+                  <td>{(page - 1) * PAGE_SIZE + idx + 1}</td>
+                  <td>{row.code}</td>
+                  <td>{row.name}</td>
+                  <td>{row.phone}</td>
+                  <td>{row.address}</td>
+                  <td>
+                    <span style={{
+                      display: "inline-block",
+                      padding: "3px 10px", borderRadius: 999,
+                      fontSize: 11, fontWeight: 600,
+                      background: cls.color + "1A", color: cls.color,
+                      border: `1px solid ${cls.color}40`,
+                    }}>
+                      {cls.label}
+                    </span>
                   </td>
-                ))}
-              </tr>
-            ))}
+                  {extraColumns.map((c) => (
+                    <td key={c.key} onClick={(e) => e.stopPropagation()}>
+                      {c.render(row)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -162,9 +194,12 @@ function Partnerprofilepage() {
   const navigate      = useNavigate();
   const currentUser   = useAuthStore((s) => s.user);
   const [tab, setTab] = useState("approved");
+  // Filter "diện" cho tab approved: all | independent | awaiting | in_tree
+  const [classFilter, setClassFilter] = useState("all");
 
   const [partners,        setPartners       ] = useState([]);
   const [upgradeRequests, setUpgradeRequests] = useState([]);
+  const [joinRequests,    setJoinRequests   ] = useState([]);
   const [loading,         setLoading        ] = useState(true);
   const [error,           setError          ] = useState("");
   const [approveModal,    setApproveModal   ] = useState(null);
@@ -173,12 +208,14 @@ function Partnerprofilepage() {
     try {
       setLoading(true);
       setError("");
-      const [partnerRes, upgradeRes] = await Promise.all([
+      const [partnerRes, upgradeRes, joinRes] = await Promise.all([
         partnerService.getAll(),
         api.get("/upgradeRequests"),
+        api.get("/joinTeamRequests"),
       ]);
       setPartners(Array.isArray(partnerRes.data) ? partnerRes.data : partnerRes.data?.data || []);
       setUpgradeRequests(Array.isArray(upgradeRes.data) ? upgradeRes.data : []);
+      setJoinRequests(Array.isArray(joinRes.data) ? joinRes.data : []);
     } catch {
       setError("Không thể tải dữ liệu.");
     } finally {
@@ -470,9 +507,21 @@ function Partnerprofilepage() {
   };
 
   /* ── Derived lists ── */
-  const approved        = partners.filter((p) => p.status === "approved");
+  const approvedAll     = partners.filter((p) => p.status === "approved");
+  const approved        = classFilter === "all"
+    ? approvedAll
+    : approvedAll.filter((p) => classifyPartner(p).key === classFilter);
   const pending         = partners.filter((p) => p.status === "pending");
   const pendingUpgrades = upgradeRequests.filter((r) => r.status === "pending");
+  const pendingJoin     = joinRequests.filter((r) => r.status === "pending");
+
+  // Đếm theo diện cho pill badge
+  const classCounts = {
+    all:         approvedAll.length,
+    independent: approvedAll.filter((p) => classifyPartner(p).key === "independent").length,
+    awaiting:    approvedAll.filter((p) => classifyPartner(p).key === "awaiting").length,
+    in_tree:     approvedAll.filter((p) => classifyPartner(p).key === "in_tree").length,
+  };
 
   /* ══════════════════════════════════════════════
      Render
@@ -531,14 +580,54 @@ function Partnerprofilepage() {
                 {pendingUpgrades.length}
               </span>
             </button>
+
+            <button
+              className={`pp-tab ${tab === "join" ? "pp-tab--active" : ""}`}
+              onClick={() => setTab("join")}
+            >
+              Yêu cầu tham gia đội nhóm{" "}
+              <span className={`pp-tab-count ${pendingJoin.length > 0 ? "pp-tab-count--pending" : ""}`}>
+                {pendingJoin.length}
+              </span>
+            </button>
           </div>
 
           {/* ── Tab: Danh sách đã duyệt ── */}
           {tab === "approved" && (
-            <PartnerTable
-              data={approved}
-              onRowClick={(id) => navigate(`/admin/partners-profile/${id}`)}
-            />
+            <>
+              {/* Filter pills theo "Diện" */}
+              <div style={{ display: "flex", gap: 8, padding: "12px 0", flexWrap: "wrap" }}>
+                {[
+                  { key: "all",         label: "Tất cả",          color: "#475569" },
+                  { key: "in_tree",     label: "Đã có cấp trên", color: "#16a34a" },
+                  { key: "awaiting",    label: "Chờ xếp nhánh",   color: "#f97316" },
+                  { key: "independent", label: "Tự do riêng lẻ",  color: "#0ea5e9" },
+                ].map((f) => {
+                  const active = classFilter === f.key;
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => setClassFilter(f.key)}
+                      style={{
+                        padding: "6px 14px", borderRadius: 999,
+                        fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        border: `1px solid ${active ? f.color : "#e2e8f0"}`,
+                        background: active ? f.color : "#fff",
+                        color: active ? "#fff" : f.color,
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {f.label} ({classCounts[f.key]})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <PartnerTable
+                data={approved}
+                onRowClick={(id) => navigate(`/admin/partners-profile/${id}`)}
+              />
+            </>
           )}
 
           {/* ── Tab: Chờ duyệt hồ sơ mới ── */}
@@ -653,6 +742,16 @@ function Partnerprofilepage() {
               </table>
             </div>
           )}
+
+          {/* ── Tab: Yêu cầu tham gia đội nhóm ── */}
+          {tab === "join" && (
+            <JoinTeamTab
+              requests={joinRequests}
+              partners={partners}
+              currentUser={currentUser}
+              onChange={fetchAll}
+            />
+          )}
         </div>
       )}
 
@@ -664,6 +763,187 @@ function Partnerprofilepage() {
           onSubmit={handleApproveUpgrade}
         />
       )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   Tab: xét duyệt yêu cầu tham gia đội nhóm
+══════════════════════════════════════════════ */
+function JoinTeamTab({ requests, partners, currentUser, onChange }) {
+  const [busy, setBusy] = useState(null);
+
+  const approve = async (req) => {
+    if (!window.confirm(`Duyệt yêu cầu của ${req.partnerName} dưới cấp trên ${req.newParentName || "(chưa chọn)"}?`)) return;
+    setBusy(req.id);
+    try {
+      // Cập nhật partner: gắn parentId + đổi memberType
+      const pRes = await api.get(`/partners/${req.partnerId}`);
+      const partner = pRes.data;
+      if (partner) {
+        await api.put(`/partners/${req.partnerId}`, {
+          ...partner,
+          parentId:   req.newParentId || null,
+          memberType: "NORMAL",
+        });
+      }
+      const updated = { ...req, status: "approved", processedAt: new Date().toLocaleDateString("vi-VN") };
+      await api.put(`/joinTeamRequests/${req.id}`, updated);
+
+      // Notify user
+      if (partner?.userId) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: partner.userId,
+          type:            "join_team_approved",
+          title:           "Yêu cầu tham gia đội nhóm được duyệt",
+          message:         `Bạn đã được gắn cấp trên ${req.newParentName || "(gốc)"} và chuyển sang chế độ NORMAL.`,
+          link:            "/my-tree",
+          partnerId:       req.partnerId,
+          partnerName:     req.partnerName,
+        });
+      }
+
+      // systemLog
+      try {
+        const slRes  = await api.get("/systemLogs");
+        const slList = Array.isArray(slRes.data) ? slRes.data : [];
+        const slMax  = slList.map((x) => Number(x.id)).filter((n) => !isNaN(n));
+        const slId   = String((slMax.length > 0 ? Math.max(...slMax) : 0) + 1);
+        await api.post("/systemLogs", {
+          id: slId,
+          type: "approve_join_team",
+          actorId: String(currentUser?.id || ""),
+          actorName: currentUser?.name || "admin",
+          targetId: String(req.partnerId),
+          targetType: "partner",
+          description: `Duyệt yêu cầu tham gia đội nhóm cho ${req.partnerName}, gắn dưới ${req.newParentName || "(gốc)"}.`,
+          createdAt: new Date().toLocaleDateString("vi-VN"),
+        });
+      } catch { /* ignore */ }
+
+      await onChange();
+    } catch (e) {
+      console.error(e);
+      alert("Duyệt thất bại.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const reject = async (req) => {
+    const reason = window.prompt("Lý do từ chối:");
+    if (!reason) return;
+    setBusy(req.id);
+    try {
+      const updated = {
+        ...req,
+        status:       "rejected",
+        rejectReason: reason,
+        processedAt:  new Date().toLocaleDateString("vi-VN"),
+      };
+      await api.put(`/joinTeamRequests/${req.id}`, updated);
+
+      // Notify user
+      try {
+        const pRes = await api.get(`/partners/${req.partnerId}`);
+        const partner = pRes.data;
+        if (partner?.userId) {
+          await notify({
+            recipientType:   "user",
+            recipientUserId: partner.userId,
+            type:            "join_team_rejected",
+            title:           "Yêu cầu tham gia đội nhóm bị từ chối",
+            message:         `Lý do: ${reason}`,
+            partnerId:       req.partnerId,
+            partnerName:     req.partnerName,
+          });
+        }
+      } catch { /* ignore */ }
+
+      await onChange();
+    } catch (e) {
+      console.error(e);
+      alert("Từ chối thất bại.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const STATUS_CFG = {
+    pending:  { label: "Chờ duyệt", color: "#f97316" },
+    approved: { label: "Đã duyệt",  color: "#16a34a" },
+    rejected: { label: "Từ chối",   color: "#dc2626" },
+  };
+
+  return (
+    <div className="pp-table-wrap">
+      <table className="pp-table">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Đối tác</th>
+            <th>Cấp trên đề xuất</th>
+            <th>Lý do</th>
+            <th>Ngày gửi</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {requests.length === 0 ? (
+            <tr><td colSpan={7} className="pp-empty">Không có yêu cầu nào.</td></tr>
+          ) : requests.slice().sort((a, b) => Number(b.id) - Number(a.id)).map((r, idx) => {
+            const cfg = STATUS_CFG[r.status] || STATUS_CFG.pending;
+            return (
+              <tr key={r.id} className="pp-row">
+                <td>{idx + 1}</td>
+                <td>
+                  <div>{r.partnerName}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{r.partnerCode}</div>
+                </td>
+                <td>
+                  {r.newParentName
+                    ? <>{r.newParentName}<div style={{ fontSize: 11, color: "#94a3b8" }}>{r.newParentCode}</div></>
+                    : <span style={{ color: "#94a3b8" }}>(Để admin tự chọn)</span>}
+                </td>
+                <td style={{ maxWidth: 240, whiteSpace: "normal" }}>{r.reason}</td>
+                <td>{r.createdAt}</td>
+                <td>
+                  <span style={{
+                    display: "inline-block", padding: "3px 10px", borderRadius: 999,
+                    fontSize: 11, fontWeight: 600,
+                    background: cfg.color + "1A", color: cfg.color,
+                    border: `1px solid ${cfg.color}40`,
+                  }}>{cfg.label}</span>
+                </td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  {r.status === "pending" ? (
+                    <div className="pp-action-btns">
+                      <button
+                        className="pp-btn-approve"
+                        onClick={() => approve(r)}
+                        disabled={busy === r.id}
+                      >
+                        ✓ Duyệt
+                      </button>
+                      <button
+                        className="pp-btn-reject"
+                        onClick={() => reject(r)}
+                        disabled={busy === r.id}
+                      >
+                        ✕ Từ chối
+                      </button>
+                    </div>
+                  ) : (
+                    <span style={{ color: "#94a3b8", fontSize: 12 }}>—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
