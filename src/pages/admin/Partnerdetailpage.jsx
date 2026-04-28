@@ -325,7 +325,7 @@ function Partnerdetailpage() {
                 <div className="pd-grid">
                   <div className="pd-field">
                     <p className="pd-field-label">Link giới thiệu</p>
-                    {(p.refLink || (p.level >= 2)) ? (
+                    {(p.refLink || (p.level >= 1)) ? (
                       <div className="pd-reflink-wrap">
                         <span className="pd-link pd-reflink-text">
                           {p.refLink || makeRefLink(p.name, p.code)}
@@ -345,7 +345,7 @@ function Partnerdetailpage() {
                       </div>
                     ) : (
                       <p className="pd-field-value pd-field-value--muted">
-                        Chưa có (cần nâng lên Cấp 2)
+                        Chưa được cấp link giới thiệu (admin cần duyệt hồ sơ trước).
                       </p>
                     )}
                   </div>

@@ -21,12 +21,15 @@ const getNow = () => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
-/* ─── Điều kiện nâng cấp (đồng bộ với spec hệ thống) ──── */
+/* ─── Điều kiện nâng cấp theo từng cấp (key = cấp hiện tại) ──── */
 const UPGRADE_CONDITIONS = {
-  minF1:       5,
-  minContracts: 10,
-  minRevenue:  300_000_000,
+  // Cấp 1 → Cấp 2
+  1: { minF1: 5,  minContracts: 10, minRevenue: 300_000_000 },
+  // Cấp 2 → Cấp 3
+  2: { minF1: 10, minContracts: 25, minRevenue: 700_000_000 },
+  // Cấp 3 = trần.
 };
+const MAX_LEVEL = 3;
 
 /* ─── Component ────────────────────────────────────────── */
 function Upgraderequestpage() {
@@ -93,12 +96,17 @@ function Upgraderequestpage() {
     return { f1: f1Count, ok: okContracts, revenue };
   })();
 
-  const conditions = [
-    { key: "f1",       label: "Số F1 trực tiếp (đã duyệt)",  current: stats.f1,       target: UPGRADE_CONDITIONS.minF1 },
-    { key: "ok",       label: "Hợp đồng KH đã duyệt",         current: stats.ok,       target: UPGRADE_CONDITIONS.minContracts },
-    { key: "revenue",  label: "Doanh thu HĐ đã duyệt (VNĐ)",  current: stats.revenue,  target: UPGRADE_CONDITIONS.minRevenue, money: true },
-  ];
-  const conditionsMet = conditions.every((c) => c.current >= c.target);
+  const currentLevelEarly = partner?.level || 1;
+  const cfg = UPGRADE_CONDITIONS[currentLevelEarly]; // undefined nếu đã max
+  const conditions = cfg
+    ? [
+        { key: "f1",      label: "Số F1 trực tiếp (đã duyệt)", current: stats.f1,      target: cfg.minF1 },
+        { key: "ok",      label: "Hợp đồng KH đã duyệt",        current: stats.ok,      target: cfg.minContracts },
+        { key: "revenue", label: "Doanh thu HĐ đã duyệt (VNĐ)", current: stats.revenue, target: cfg.minRevenue, money: true },
+      ]
+    : [];
+  const conditionsMet = conditions.length > 0 && conditions.every((c) => c.current >= c.target);
+  const isMaxLevel    = currentLevelEarly >= MAX_LEVEL;
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -107,10 +115,10 @@ function Upgraderequestpage() {
     if (!file)           { setError("Vui lòng upload hợp đồng đã ký."); return; }
     if (!partner)        { setError("Không tìm thấy hồ sơ đối tác."); return; }
 
-    // Chỉ cấp 1 và 2 mới được nâng cấp
+    // Chỉ cấp 1 và 2 mới được nâng cấp; Cấp 3 = trần
     const currentLevel = partner.level || 1;
-    if (currentLevel >= 3) {
-      setError("Bạn đã đạt cấp bậc tối đa.");
+    if (currentLevel >= MAX_LEVEL) {
+      setError(`Bạn đã đạt Cấp ${MAX_LEVEL} — cấp bậc tối đa của hệ thống. Quyền lợi: hưởng nhiều hoa hồng hơn từ tuyến dưới.`);
       return;
     }
     if (!conditionsMet) {
@@ -243,11 +251,30 @@ function Upgraderequestpage() {
         <div className="urp-form-card">
           <h3 className="urp-card-title">Điều kiện nâng cấp</h3>
 
+          {isMaxLevel ? (
+            <div style={{
+              border: "1px solid #bfdbfe",
+              background: "#eff6ff",
+              borderRadius: 10, padding: 14, marginBottom: 18,
+              fontSize: 13, color: "#1e40af",
+            }}>
+              🏆 Bạn đã đạt <strong>Cấp {MAX_LEVEL}</strong> — cấp bậc tối đa.
+              Hệ thống không còn cấp cao hơn để nâng. Quyền lợi của bạn:
+              <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
+                <li>Hưởng tỉ lệ hoa hồng cá nhân cao nhất.</li>
+                <li>Nhận hoa hồng từ tuyến dưới (F1, F2) ở mức cao nhất.</li>
+                <li>Có quyền yêu cầu chỉnh sửa hoa hồng trực tiếp với admin.</li>
+              </ul>
+            </div>
+          ) : (
           <div style={{
             border: `1px solid ${conditionsMet ? "#bbf7d0" : "#fde68a"}`,
             background: conditionsMet ? "#f0fdf4" : "#fffbeb",
             borderRadius: 10, padding: 14, marginBottom: 18,
           }}>
+            <p style={{ fontSize: 12, color: "#475569", margin: "0 0 8px" }}>
+              Yêu cầu để lên <strong>Cấp {currentLevelEarly + 1}</strong>:
+            </p>
             {conditions.map((c) => {
               const ok = c.current >= c.target;
               const pct = Math.min(100, Math.round((c.current / c.target) * 100));
@@ -280,6 +307,7 @@ function Upgraderequestpage() {
               </p>
             )}
           </div>
+          )}
 
           <h3 className="urp-card-title">Thông tin yêu cầu</h3>
 
@@ -365,14 +393,19 @@ function Upgraderequestpage() {
             <button
               className="urp-btn-submit"
               type="submit"
-              disabled={submitting || !conditionsMet}
-              title={!conditionsMet ? "Bạn chưa đủ điều kiện nâng cấp" : ""}
+              disabled={submitting || !conditionsMet || isMaxLevel}
+              title={
+                isMaxLevel ? `Đã đạt Cấp ${MAX_LEVEL} — cấp bậc tối đa` :
+                !conditionsMet ? "Bạn chưa đủ điều kiện nâng cấp" : ""
+              }
             >
               {submitting
                 ? "Đang gửi..."
-                : conditionsMet
-                  ? `✓ Gửi yêu cầu nâng cấp lên Cấp ${nextLevel}`
-                  : "🔒 Chưa đủ điều kiện nâng cấp"}
+                : isMaxLevel
+                  ? `🏆 Đã đạt Cấp ${MAX_LEVEL} — cấp tối đa`
+                  : conditionsMet
+                    ? `✓ Gửi yêu cầu nâng cấp lên Cấp ${nextLevel}`
+                    : "🔒 Chưa đủ điều kiện nâng cấp"}
             </button>
           </form>
         </div>

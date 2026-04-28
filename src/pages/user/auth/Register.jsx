@@ -26,16 +26,14 @@ const extractCode = (input = "") => {
 };
 
 /**
- * Tìm đối tác theo code — chỉ approved + level >= 2 mới có link giới thiệu
+ * Tìm đối tác theo code — mọi đối tác approved (bao gồm cấp 1) đều có
+ * thể là người giới thiệu (mã/link giới thiệu được cấp ngay khi duyệt hồ sơ).
  */
 const findPartnerByCode = async (code) => {
   try {
     const res  = await api.get(`/partners?code=${code}&status=approved`);
     const list = Array.isArray(res.data) ? res.data : [];
-    const found = list[0] || null;
-    // Chỉ cấp 2 trở lên mới được giới thiệu
-    if (found && (found.level || 1) < 2) return null;
-    return found;
+    return list[0] || null;
   } catch {
     return null;
   }
@@ -284,13 +282,7 @@ function Register() {
           return;
         }
 
-        // Kiểm tra cấp bậc — chỉ cấp 2 trở lên
-        if ((found.level || 1) < 2) {
-          setReferrerStatus("invalid_level");
-          setReferrer(found); // vẫn lưu để hiển thị tên trong warning nếu cần
-          return;
-        }
-
+        // Mọi đối tác approved đều có quyền giới thiệu (cấp 1, 2, 3 đều được).
         setReferrer(found);
         setReferrerStatus("found");
       } catch {
@@ -313,14 +305,11 @@ function Register() {
     if (form.password !== form.confirmPassword) return "Mật khẩu xác nhận không khớp.";
     if (!cccdFront)         return "Vui lòng tải ảnh mặt trước CCCD/Hộ chiếu.";
     if (!cccdBack)          return "Vui lòng tải ảnh mặt sau CCCD/Hộ chiếu.";
-    // Nếu đã nhập link giới thiệu nhưng chưa tìm thấy / không hợp lệ
-    if (form.referralLink.trim() && referrerStatus === "loading") return "Đang kiểm tra link giới thiệu, vui lòng đợi.";
-    if (form.referralLink.trim() && referrerStatus === "not_found") return "Link giới thiệu không hợp lệ.";
-    if (form.referralLink.trim() && referrerStatus === "invalid_level") return "Người giới thiệu chưa đủ điều kiện (yêu cầu từ Cấp 2 trở lên).";
-    // Đội nhóm thì bắt buộc phải có người giới thiệu hợp lệ (trừ khi đăng ký cá nhân)
-    if (form.activityType === "team" && !referrer && form.referralLink.trim() === "") {
-      return "Bạn chọn 'Hoạt động đội nhóm' nhưng chưa có mã/link người giới thiệu hợp lệ.";
-    }
+    // Mã giới thiệu KHÔNG bắt buộc — bỏ trống = vào diện "tự do chờ xếp nhánh".
+    // Chỉ validate khi user đã gõ thứ gì đó vào ô để bảo đảm hợp lệ.
+    if (form.referralLink.trim() && referrerStatus === "loading")       return "Đang kiểm tra link giới thiệu, vui lòng đợi.";
+    if (form.referralLink.trim() && referrerStatus === "not_found")     return "Link giới thiệu không hợp lệ.";
+    // (Đã bỏ ràng buộc level — mọi đối tác approved đều giới thiệu được.)
     return null;
   };
 
@@ -523,9 +512,15 @@ function Register() {
                   </div>
                 </div>
 
-                {/* ── Link giới thiệu + preview ── */}
+                {/* ── Link giới thiệu (không bắt buộc) ── */}
                 <div className="pf-field" style={{ display: form.activityType === "individual" ? "none" : "" }}>
-                  <label>Mã hoặc link người giới thiệu</label>
+                  <label>
+                    Mã hoặc link người giới thiệu <span style={{ color: "#94a3b8", fontWeight: 400 }}>(không bắt buộc)</span>
+                  </label>
+                  <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px" }}>
+                    Bỏ trống nếu chưa có. Sau khi admin duyệt, bạn sẽ vào diện
+                    <strong> "Tự do chờ xếp nhánh"</strong> và admin sẽ tự gắn cấp trên cho bạn.
+                  </p>
                   <div style={{ position: "relative" }}>
                     <input
                       name="referralLink"
