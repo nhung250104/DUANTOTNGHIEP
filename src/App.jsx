@@ -31,6 +31,7 @@ import Commissionpage            from "./pages/admin/Commissionpage";
 import Commissionrequestlistpage from "./pages/admin/Commissionrequestlistpage";
 import Branchtransferlistpage    from "./pages/admin/Branchtransferlistpage";
 import Customerpage              from "./pages/admin/Customerpage";
+import Systemlogspage            from "./pages/admin/Systemlogspage";
 
 // ===== User Pages =====
 import Usernewspage       from "./pages/user/pages/Usernewspage";
@@ -40,6 +41,8 @@ import Partnercontractpage from "./pages/user/pages/Partnercontractpage";
 import Myprofilepage      from "./pages/user/pages/Myprofilepage";
 import Mystatspage        from "./pages/user/pages/Mystatspage";
 import Branchtransferpage from "./pages/user/pages/Branchtransferpage";
+import Mycommissionpage   from "./pages/user/pages/Mycommissionpage";
+import Mypromotionpage    from "./pages/user/pages/Mypromotionpage";
 
 // ===== Components =====
 import Header        from "./components/Header";
@@ -124,6 +127,9 @@ function App() {
         <Route path="commission-requests" element={<Commissionrequestlistpage />} />
         <Route path="branch-transfers"    element={<Branchtransferlistpage />} />
 
+        {/* Nhật ký hệ thống */}
+        <Route path="logs"                element={<Systemlogspage />} />
+
         {/* Thống kê */}
         <Route path="stats" element={<Statspage />} />
       </Route>
@@ -145,6 +151,10 @@ function App() {
 
         {/* Khách hàng (user) */}
         <Route path="/khach-hang"                         element={<Customerpage />} />
+
+        {/* Hoa hồng + lịch sử nâng cấp */}
+        <Route path="/my-commission"                      element={<Mycommissionpage />} />
+        <Route path="/my-promotion"                       element={<Mypromotionpage />} />
 
         {/* Hợp đồng đối tác (user) */}
         <Route path="/partner-contract"                   element={<Partnercontractpage />} />

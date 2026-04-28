@@ -211,6 +211,9 @@ function Register() {
     phone:           "",
     address:         "",
     referralLink:    refFromUrl ? `sivip.vn/ref/${refFromUrl}` : "",
+    // Hình thức hoạt động: "team" (NORMAL) hoặc "individual" (INDEPENDENT).
+    // Tự bật "team" nếu vào qua link giới thiệu, vì luồng đó luôn vào hệ thống đội nhóm.
+    activityType:    refFromUrl ? "team" : "team",
     password:        "",
     confirmPassword: "",
   });
@@ -314,6 +317,10 @@ function Register() {
     if (form.referralLink.trim() && referrerStatus === "loading") return "Đang kiểm tra link giới thiệu, vui lòng đợi.";
     if (form.referralLink.trim() && referrerStatus === "not_found") return "Link giới thiệu không hợp lệ.";
     if (form.referralLink.trim() && referrerStatus === "invalid_level") return "Người giới thiệu chưa đủ điều kiện (yêu cầu từ Cấp 2 trở lên).";
+    // Đội nhóm thì bắt buộc phải có người giới thiệu hợp lệ (trừ khi đăng ký cá nhân)
+    if (form.activityType === "team" && !referrer && form.referralLink.trim() === "") {
+      return "Bạn chọn 'Hoạt động đội nhóm' nhưng chưa có mã/link người giới thiệu hợp lệ.";
+    }
     return null;
   };
 
@@ -328,14 +335,18 @@ function Register() {
     try {
       /* ── 1. Tạo user mới ── */
       const maxUserId = await getMaxId("users");
+      // memberType: INDEPENDENT nếu user chọn "Hoạt động cá nhân"; ngược lại NORMAL
+      const memberType = form.activityType === "individual" ? "INDEPENDENT" : "NORMAL";
+
       const newUser = {
-        id:       String(maxUserId + 1),
-        name:     form.fullName,
-        email:    form.email,
-        phone:    form.phone,
-        password: form.password,
-        role:     "Đối tác",
-        status:   "pending_approval", // chờ admin duyệt
+        id:         String(maxUserId + 1),
+        name:       form.fullName,
+        email:      form.email,
+        phone:      form.phone,
+        password:   form.password,
+        role:       "Đối tác",
+        memberType,
+        status:     "pending_approval", // chờ admin duyệt
       };
       await api.post("/users", newUser);
 
@@ -362,8 +373,10 @@ function Register() {
         joinDate:     null,
         submittedAt:  getNow(),
         userId:       String(maxUserId + 1),             // ← liên kết user
-        parentId:     referrer ? referrer.id   : null,   // ← gắn cấp trên
-        referralCode: referrer ? referrer.code : null,
+        // Cá nhân (INDEPENDENT) thì không gắn cấp trên dù có gõ link.
+        parentId:     memberType === "INDEPENDENT" ? null : (referrer ? referrer.id   : null),
+        referralCode: memberType === "INDEPENDENT" ? null : (referrer ? referrer.code : null),
+        memberType,
         level:        null,   // sẽ được set thành 1 khi admin duyệt
         levelLabel:   null,
         contracts:    0,
@@ -465,9 +478,54 @@ function Register() {
                 <Input label="Số điện thoại *"     name="phone"        type="tel"   placeholder="Nhập số điện thoại" value={form.phone}        onChange={onChange} />
                 <Input label="Địa chỉ hiện tại *"  name="address"      placeholder="Ví dụ: Sơn Trà, Đà Nẵng"       value={form.address}      onChange={onChange} icon="📍" />
 
-                {/* ── Link giới thiệu + preview ── */}
+                {/* ── Hình thức hoạt động ── */}
                 <div className="pf-field">
-                  <label>Link người giới thiệu (nếu có)</label>
+                  <label>Hình thức hoạt động *</label>
+                  <div style={{ display: "flex", gap: 16, marginTop: 6, flexWrap: "wrap" }}>
+                    <label style={{
+                      flex: 1, minWidth: 160,
+                      padding: "10px 12px",
+                      border: `2px solid ${form.activityType === "team" ? "#0d9488" : "#e2e8f0"}`,
+                      borderRadius: 10, cursor: "pointer",
+                      background: form.activityType === "team" ? "#f0fdfa" : "#fff",
+                      transition: "all 0.15s",
+                    }}>
+                      <input
+                        type="radio" name="activityType" value="team"
+                        checked={form.activityType === "team"}
+                        onChange={onChange}
+                        style={{ marginRight: 8 }}
+                      />
+                      <strong>Đội nhóm</strong>
+                      <p style={{ fontSize: 12, color: "#64748b", margin: "4px 0 0 22px" }}>
+                        Có người giới thiệu, hưởng hoa hồng theo cây phân cấp.
+                      </p>
+                    </label>
+                    <label style={{
+                      flex: 1, minWidth: 160,
+                      padding: "10px 12px",
+                      border: `2px solid ${form.activityType === "individual" ? "#0d9488" : "#e2e8f0"}`,
+                      borderRadius: 10, cursor: "pointer",
+                      background: form.activityType === "individual" ? "#f0fdfa" : "#fff",
+                      transition: "all 0.15s",
+                    }}>
+                      <input
+                        type="radio" name="activityType" value="individual"
+                        checked={form.activityType === "individual"}
+                        onChange={onChange}
+                        style={{ marginRight: 8 }}
+                      />
+                      <strong>Cá nhân</strong>
+                      <p style={{ fontSize: 12, color: "#64748b", margin: "4px 0 0 22px" }}>
+                        Hoạt động độc lập, không tham gia hệ thống phân cấp.
+                      </p>
+                    </label>
+                  </div>
+                </div>
+
+                {/* ── Link giới thiệu + preview ── */}
+                <div className="pf-field" style={{ display: form.activityType === "individual" ? "none" : "" }}>
+                  <label>Mã hoặc link người giới thiệu</label>
                   <div style={{ position: "relative" }}>
                     <input
                       name="referralLink"

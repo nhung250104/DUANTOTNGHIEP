@@ -14,6 +14,8 @@ import {
   Percent,
   Shuffle,
   UserPlus,
+  History,
+  ScrollText,
 } from "lucide-react";
 
 /* ─── Menu theo role ─────────────────────────────────────── */
@@ -28,6 +30,7 @@ const ADMIN_MENU = [
   { path: "/admin/customer-contracts",   icon: FileText,   label: "Hợp đồng Khách hàng"      },
   { path: "/admin/commission-requests",  icon: Percent,    label: "Yêu cầu chỉnh sửa HH"     },
   { path: "/admin/branch-transfers",     icon: Shuffle,    label: "Yêu cầu chuyển nhánh"     },
+  { path: "/admin/logs",                 icon: ScrollText, label: "Nhật ký hệ thống"         },
   { path: "/admin/account",              icon: User,       label: "Tài khoản"                },
 ];
 
@@ -40,6 +43,8 @@ const MEMBER_MENU = [
   { path: "/branch-transfer",     icon: Shuffle,         label: "Yêu cầu chuyển nhánh" },
   { path: "/hop-dong-doi-tac",    icon: FileCheck,       label: "Hợp đồng đối tác"     },
   { path: "/hop-dong-khach-hang", icon: FileText,        label: "Hợp đồng khách hàng"  },
+  { path: "/my-commission",       icon: Percent,         label: "Hoa hồng"             },
+  { path: "/my-promotion",        icon: History,         label: "Lịch sử nâng cấp"     },
   { path: "/my-stats",            icon: BarChart3,       label: "Thống kê"             },
 ];
 
