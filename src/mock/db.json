@@ -55,7 +55,8 @@
       "phone": "0379187001",
       "password": "123456",
       "role": "Admin",
-      "status": "active"
+      "status": "active",
+      "memberType": "ADMIN"
     },
     {
       "id": "2",
@@ -64,7 +65,8 @@
       "phone": "0123456789",
       "password": "123456",
       "role": "Đối tác",
-      "status": "active"
+      "status": "active",
+      "memberType": "NORMAL"
     },
     {
       "id": "3",
@@ -73,7 +75,8 @@
       "phone": "0987654321",
       "password": "123456",
       "role": "Đối tác",
-      "status": "active"
+      "status": "active",
+      "memberType": "NORMAL"
     },
     {
       "id": "4",
@@ -82,7 +85,8 @@
       "phone": "0912345678",
       "password": "123456",
       "role": "Đối tác",
-      "status": "active"
+      "status": "active",
+      "memberType": "NORMAL"
     },
     {
       "id": "5",
@@ -91,7 +95,8 @@
       "phone": "0934567890",
       "password": "123456",
       "role": "Đối tác",
-      "status": "active"
+      "status": "active",
+      "memberType": "NORMAL"
     },
     {
       "id": "6",
@@ -100,7 +105,8 @@
       "phone": "0945678901",
       "password": "123456",
       "role": "Đối tác",
-      "status": "active"
+      "status": "active",
+      "memberType": "NORMAL"
     },
     {
       "id": "7",
@@ -109,7 +115,8 @@
       "phone": "0956789012",
       "password": "123456",
       "role": "Đối tác",
-      "status": "locked"
+      "status": "locked",
+      "memberType": "NORMAL"
     },
     {
       "id": "8",
@@ -118,7 +125,8 @@
       "phone": "0373463746",
       "password": "12345678",
       "role": "Đối tác",
-      "status": "locked"
+      "status": "locked",
+      "memberType": "NORMAL"
     },
     {
       "id": "9",
@@ -127,7 +135,8 @@
       "phone": "0379187001",
       "password": "12345678",
       "role": "Đối tác",
-      "status": "active"
+      "status": "active",
+      "memberType": "NORMAL"
     },
     {
       "id": "10",
@@ -136,7 +145,8 @@
       "phone": "0379187002",
       "password": "12345678",
       "role": "Đối tác",
-      "status": "locked"
+      "status": "locked",
+      "memberType": "NORMAL"
     },
     {
       "id": "11",
@@ -145,7 +155,8 @@
       "phone": "admin@gmail.com",
       "password": "123456",
       "role": "Đối tác",
-      "status": "locked"
+      "status": "locked",
+      "memberType": "NORMAL"
     }
   ],
   "partners": [
@@ -177,7 +188,8 @@
       "street": null,
       "cccdFront": null,
       "cccdBack": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "NORMAL"
     },
     {
       "id": "2",
@@ -207,7 +219,8 @@
       "street": null,
       "cccdFront": null,
       "cccdBack": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "NORMAL"
     },
     {
       "id": "3",
@@ -237,7 +250,8 @@
       "street": null,
       "cccdFront": null,
       "cccdBack": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "NORMAL"
     },
     {
       "id": "4",
@@ -267,7 +281,8 @@
       "street": null,
       "cccdFront": null,
       "cccdBack": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "PARTNER"
     },
     {
       "id": "5",
@@ -297,7 +312,8 @@
       "street": null,
       "cccdFront": null,
       "cccdBack": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "NORMAL"
     },
     {
       "id": "6",
@@ -327,7 +343,8 @@
       "street": null,
       "cccdFront": null,
       "cccdBack": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "NORMAL"
     },
     {
       "id": "7",
@@ -359,7 +376,8 @@
       "bank": null,
       "bankAccount": null,
       "managedBy": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "NORMAL"
     },
     {
       "id": "8",
@@ -391,7 +409,8 @@
       "bank": null,
       "bankAccount": null,
       "managedBy": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "PARTNER"
     },
     {
       "id": "9",
@@ -423,7 +442,8 @@
       "bank": null,
       "bankAccount": null,
       "managedBy": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "memberType": "NORMAL"
     }
   ],
   "upgradeRequests": [
@@ -697,5 +717,10 @@
     }
   ],
   "branchTransferRequests": [],
+  "customers": [],
+  "commissionHistory": [],
+  "promotionHistory": [],
+  "systemLogs": [],
+  "joinTeamRequests": [],
   "$schema": "./node_modules/json-server/schema.json"
 }

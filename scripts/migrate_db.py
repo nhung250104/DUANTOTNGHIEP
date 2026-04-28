@@ -1,0 +1,76 @@
+"""
+Migration cho db.json — Phase 1.
+
+Thêm các collection mới (idempotent) và field memberType cho users + partners.
+Chạy nhiều lần không gây hại: chỉ điền giá trị nếu chưa có.
+
+Usage:
+    python3 scripts/migrate_db.py
+"""
+
+import json
+from pathlib import Path
+
+DB = Path(__file__).resolve().parent.parent / "src" / "mock" / "db.json"
+
+NEW_COLLECTIONS = [
+    "customers",
+    "commissionHistory",
+    "promotionHistory",
+    "systemLogs",
+    "joinTeamRequests",
+]
+
+VALID_MEMBER_TYPES = {"NORMAL", "INDEPENDENT", "PARTNER", "ADMIN"}
+
+
+def main():
+    with open(DB, "r", encoding="utf-8") as f:
+        d = json.load(f)
+
+    # 1. Thêm collection mới
+    for col in NEW_COLLECTIONS:
+        if col not in d:
+            d[col] = []
+
+    # 2. memberType cho users
+    for u in d.get("users", []):
+        existing = u.get("memberType")
+        if existing in VALID_MEMBER_TYPES:
+            continue
+        role = (u.get("role") or "").strip().lower()
+        u["memberType"] = "ADMIN" if role == "admin" else "NORMAL"
+
+    # 3. memberType cho partners
+    #    - level >= 2 -> PARTNER (đã từng nâng cấp)
+    #    - còn lại    -> NORMAL (admin có thể đổi sang INDEPENDENT thủ công)
+    for p in d.get("partners", []):
+        existing = p.get("memberType")
+        if existing in VALID_MEMBER_TYPES:
+            continue
+        level = p.get("level") or 0
+        p["memberType"] = "PARTNER" if level >= 2 else "NORMAL"
+
+    # 4. Đảm bảo $schema vẫn nằm cuối (cho tidy)
+    schema = d.pop("$schema", None)
+    if schema is not None:
+        d["$schema"] = schema
+
+    with open(DB, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False, indent=2)
+
+    summary = {k: (len(v) if isinstance(v, list) else "—") for k, v in d.items() if k != "$schema"}
+    members = {}
+    for u in d.get("users", []):
+        members[u.get("memberType", "?")] = members.get(u.get("memberType", "?"), 0) + 1
+
+    print("Collections:")
+    for k, n in summary.items():
+        marker = " (NEW)" if k in NEW_COLLECTIONS else ""
+        print(f"  {k}: {n}{marker}")
+    print()
+    print("memberType users:", members)
+
+
+if __name__ == "__main__":
+    main()
