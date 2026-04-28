@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
 import api from "../../store/api";
+import useAuthStore from "../../store/authStore";
 import "./Partnerprofilepage.css";
 
 const PAGE_SIZE = 17;
@@ -158,6 +159,7 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
 ══════════════════════════════════════════════ */
 function Partnerprofilepage() {
   const navigate      = useNavigate();
+  const currentUser   = useAuthStore((s) => s.user);
   const [tab, setTab] = useState("approved");
 
   const [partners,        setPartners       ] = useState([]);
@@ -340,6 +342,34 @@ function Partnerprofilepage() {
         contractFile: file.name,
         approvedAt:   new Date().toLocaleDateString("vi-VN"),
       });
+
+      // Ghi promotionHistory + systemLog (không chặn flow nếu lỗi)
+      try {
+        const phId = await getMaxId("promotionHistory");
+        await api.post("/promotionHistory", {
+          id:         String(phId + 1),
+          partnerId:  String(req.partnerId),
+          partnerName: req.partnerName,
+          oldLevel:   req.currentLevel || 1,
+          newLevel:   nextLevel,
+          approvedBy: currentUser?.name || "admin",
+          reason:     req.reason || "",
+          createdAt:  new Date().toLocaleDateString("vi-VN"),
+        });
+        const slId = await getMaxId("systemLogs");
+        await api.post("/systemLogs", {
+          id:         String(slId + 1),
+          type:       "approve_upgrade",
+          actorId:    String(currentUser?.id || ""),
+          actorName:  currentUser?.name || "admin",
+          targetId:   String(req.partnerId),
+          targetType: "partner",
+          description: `Nâng cấp ${req.partnerName} từ Cấp ${req.currentLevel || 1} lên Cấp ${nextLevel}`,
+          createdAt:  new Date().toLocaleDateString("vi-VN"),
+        });
+      } catch (e) {
+        console.warn("Không ghi được promotionHistory/systemLog:", e);
+      }
 
       setUpgradeRequests((prev) =>
         prev.map((r) =>

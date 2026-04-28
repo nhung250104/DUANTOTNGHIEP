@@ -21,28 +21,43 @@ const getNow = () => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
+/* ─── Điều kiện nâng cấp (đồng bộ với spec hệ thống) ──── */
+const UPGRADE_CONDITIONS = {
+  minF1:       5,
+  minContracts: 10,
+  minRevenue:  300_000_000,
+};
+
 /* ─── Component ────────────────────────────────────────── */
 function Upgraderequestpage() {
   const navigate    = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
 
-  const [partner,  setPartner ] = useState(null);
-  const [loading,  setLoading ] = useState(true);
-  const [error,    setError   ] = useState("");
-  const [reason,   setReason  ] = useState("");
-  const [file,     setFile    ] = useState(null);
+  const [partner,    setPartner   ] = useState(null);
+  const [allPartners,setAllPartners] = useState([]);
+  const [contracts,  setContracts ] = useState([]);
+  const [loading,    setLoading   ] = useState(true);
+  const [error,      setError     ] = useState("");
+  const [reason,     setReason    ] = useState("");
+  const [file,       setFile      ] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [success,  setSuccess ] = useState(false);
+  const [success,    setSuccess   ] = useState(false);
   const fileRef = useRef();
 
-  /* ── Lấy thông tin đối tác của user đang đăng nhập ── */
+  /* ── Fetch partner + danh sách partner + HĐ KH ── */
   useEffect(() => {
-    const fetchPartner = async () => {
+    const fetchAll = async () => {
       try {
-        const res  = await partnerService.getAll();
-        const list = Array.isArray(res.data) ? res.data : [];
-        // Tìm partner theo email hoặc userId
-        const found = list.find(
+        const [pRes, cRes] = await Promise.all([
+          partnerService.getAll(),
+          api.get("/customerContracts"),
+        ]);
+        const pList = Array.isArray(pRes.data) ? pRes.data : [];
+        const cList = Array.isArray(cRes.data) ? cRes.data : [];
+        setAllPartners(pList);
+        setContracts(cList);
+
+        const found = pList.find(
           (p) => p.email === currentUser?.email || p.userId === String(currentUser?.id)
         );
         if (!found) {
@@ -56,13 +71,34 @@ function Upgraderequestpage() {
         setLoading(false);
       }
     };
-    if (currentUser) fetchPartner();
+    if (currentUser) fetchAll();
   }, [currentUser]);
 
   const onFile = (e) => {
     const f = e.target.files?.[0];
     if (f) setFile(f);
   };
+
+  /* ── Tính điều kiện trước khi cho gửi ── */
+  const stats = (() => {
+    if (!partner) return { f1: 0, ok: 0, revenue: 0 };
+    const f1Count = allPartners.filter(
+      (p) => String(p.parentId) === String(partner.id) && p.status === "approved"
+    ).length;
+    const myApproved = contracts.filter(
+      (c) => String(c.partnerId) === String(partner.id) && c.status === "approved"
+    );
+    const okContracts = myApproved.length;
+    const revenue = myApproved.reduce((s, c) => s + (Number(c.value) || 0), 0);
+    return { f1: f1Count, ok: okContracts, revenue };
+  })();
+
+  const conditions = [
+    { key: "f1",       label: "Số F1 trực tiếp (đã duyệt)",  current: stats.f1,       target: UPGRADE_CONDITIONS.minF1 },
+    { key: "ok",       label: "Hợp đồng KH đã duyệt",         current: stats.ok,       target: UPGRADE_CONDITIONS.minContracts },
+    { key: "revenue",  label: "Doanh thu HĐ đã duyệt (VNĐ)",  current: stats.revenue,  target: UPGRADE_CONDITIONS.minRevenue, money: true },
+  ];
+  const conditionsMet = conditions.every((c) => c.current >= c.target);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -75,6 +111,10 @@ function Upgraderequestpage() {
     const currentLevel = partner.level || 1;
     if (currentLevel >= 3) {
       setError("Bạn đã đạt cấp bậc tối đa.");
+      return;
+    }
+    if (!conditionsMet) {
+      setError("Bạn chưa đủ điều kiện nâng cấp. Vui lòng xem chi tiết bên dưới.");
       return;
     }
 
@@ -201,6 +241,46 @@ function Upgraderequestpage() {
 
         {/* ── Cột phải: form gửi yêu cầu ── */}
         <div className="urp-form-card">
+          <h3 className="urp-card-title">Điều kiện nâng cấp</h3>
+
+          <div style={{
+            border: `1px solid ${conditionsMet ? "#bbf7d0" : "#fde68a"}`,
+            background: conditionsMet ? "#f0fdf4" : "#fffbeb",
+            borderRadius: 10, padding: 14, marginBottom: 18,
+          }}>
+            {conditions.map((c) => {
+              const ok = c.current >= c.target;
+              const pct = Math.min(100, Math.round((c.current / c.target) * 100));
+              const fmtNum = (n) => c.money
+                ? new Intl.NumberFormat("vi-VN").format(n) + " đ"
+                : new Intl.NumberFormat("vi-VN").format(n);
+              return (
+                <div key={c.key} style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600, color: "#334155" }}>
+                      {ok ? "✅" : "⚠️"} {c.label}
+                    </span>
+                    <span style={{ color: ok ? "#15803d" : "#92400e", fontWeight: 600 }}>
+                      {fmtNum(c.current)} / {fmtNum(c.target)}
+                    </span>
+                  </div>
+                  <div style={{ height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{
+                      width: `${pct}%`, height: "100%",
+                      background: ok ? "#22c55e" : "#f59e0b",
+                      transition: "width 0.3s",
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+            {!conditionsMet && (
+              <p style={{ fontSize: 12, color: "#78350f", marginTop: 8, marginBottom: 0 }}>
+                Bạn cần đạt đủ cả 3 điều kiện trên mới có thể gửi yêu cầu nâng cấp.
+              </p>
+            )}
+          </div>
+
           <h3 className="urp-card-title">Thông tin yêu cầu</h3>
 
           {error && <div className="urp-error">{error}</div>}
@@ -282,8 +362,17 @@ function Upgraderequestpage() {
               </ul>
             </div>
 
-            <button className="urp-btn-submit" type="submit" disabled={submitting}>
-              {submitting ? "Đang gửi..." : `✓ Gửi yêu cầu nâng cấp lên Cấp ${nextLevel}`}
+            <button
+              className="urp-btn-submit"
+              type="submit"
+              disabled={submitting || !conditionsMet}
+              title={!conditionsMet ? "Bạn chưa đủ điều kiện nâng cấp" : ""}
+            >
+              {submitting
+                ? "Đang gửi..."
+                : conditionsMet
+                  ? `✓ Gửi yêu cầu nâng cấp lên Cấp ${nextLevel}`
+                  : "🔒 Chưa đủ điều kiện nâng cấp"}
             </button>
           </form>
         </div>
