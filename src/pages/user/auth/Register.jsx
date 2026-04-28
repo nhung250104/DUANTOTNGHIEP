@@ -26,16 +26,14 @@ const extractCode = (input = "") => {
 };
 
 /**
- * Tìm đối tác theo code — chỉ approved + level >= 2 mới có link giới thiệu
+ * Tìm đối tác theo code — mọi đối tác approved (bao gồm cấp 1) đều có
+ * thể là người giới thiệu (mã/link giới thiệu được cấp ngay khi duyệt hồ sơ).
  */
 const findPartnerByCode = async (code) => {
   try {
     const res  = await api.get(`/partners?code=${code}&status=approved`);
     const list = Array.isArray(res.data) ? res.data : [];
-    const found = list[0] || null;
-    // Chỉ cấp 2 trở lên mới được giới thiệu
-    if (found && (found.level || 1) < 2) return null;
-    return found;
+    return list[0] || null;
   } catch {
     return null;
   }
@@ -284,13 +282,7 @@ function Register() {
           return;
         }
 
-        // Kiểm tra cấp bậc — chỉ cấp 2 trở lên
-        if ((found.level || 1) < 2) {
-          setReferrerStatus("invalid_level");
-          setReferrer(found); // vẫn lưu để hiển thị tên trong warning nếu cần
-          return;
-        }
-
+        // Mọi đối tác approved đều có quyền giới thiệu (cấp 1, 2, 3 đều được).
         setReferrer(found);
         setReferrerStatus("found");
       } catch {
@@ -317,7 +309,7 @@ function Register() {
     // Chỉ validate khi user đã gõ thứ gì đó vào ô để bảo đảm hợp lệ.
     if (form.referralLink.trim() && referrerStatus === "loading")       return "Đang kiểm tra link giới thiệu, vui lòng đợi.";
     if (form.referralLink.trim() && referrerStatus === "not_found")     return "Link giới thiệu không hợp lệ.";
-    if (form.referralLink.trim() && referrerStatus === "invalid_level") return "Người giới thiệu chưa đủ điều kiện (yêu cầu từ Cấp 2 trở lên).";
+    // (Đã bỏ ràng buộc level — mọi đối tác approved đều giới thiệu được.)
     return null;
   };
 

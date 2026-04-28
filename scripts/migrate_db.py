@@ -51,7 +51,41 @@ def main():
         level = p.get("level") or 0
         p["memberType"] = "PARTNER" if level >= 2 else "NORMAL"
 
-    # 4. Đảm bảo $schema vẫn nằm cuối (cho tidy)
+    # 4. Backfill refLink cho mọi đối tác đã duyệt (mọi cấp, không chỉ >=2).
+    #    Spec mới: Cấp 1 cũng có mã + link giới thiệu.
+    for p in d.get("partners", []):
+        if p.get("status") == "approved" and not p.get("refLink") and p.get("code"):
+            p["refLink"] = f"sivip.vn/ref/{p['code']}"
+
+    # 5. Seed promotionHistory cho Nguyễn Văn D (id=4) nếu đã đạt Cấp 3 mà chưa có lịch sử.
+    partners = d.get("partners", [])
+    promotions = d.get("promotionHistory", [])
+    vand = next((p for p in partners if p.get("id") == "4" and (p.get("level") or 0) >= 3), None)
+    if vand and not any(h.get("partnerId") == "4" for h in promotions):
+        max_id = max([int(h["id"]) for h in promotions if str(h.get("id", "")).isdigit()] or [0])
+        promotions.append({
+            "id":          str(max_id + 1),
+            "partnerId":   "4",
+            "partnerName": vand.get("name", "Nguyễn Văn D"),
+            "oldLevel":    1,
+            "newLevel":    2,
+            "approvedBy":  "Admin",
+            "reason":      "Đã đạt 5 F1 trực tiếp + 10 hợp đồng KH thành công.",
+            "createdAt":   "15/02/2026",
+        })
+        promotions.append({
+            "id":          str(max_id + 2),
+            "partnerId":   "4",
+            "partnerName": vand.get("name", "Nguyễn Văn D"),
+            "oldLevel":    2,
+            "newLevel":    3,
+            "approvedBy":  "Admin",
+            "reason":      "Đã đạt 10 F1 trực tiếp + 25 hợp đồng + doanh thu 700tr.",
+            "createdAt":   "10/04/2026",
+        })
+        d["promotionHistory"] = promotions
+
+    # 6. Đảm bảo $schema vẫn nằm cuối (cho tidy)
     schema = d.pop("$schema", None)
     if schema is not None:
         d["$schema"] = schema

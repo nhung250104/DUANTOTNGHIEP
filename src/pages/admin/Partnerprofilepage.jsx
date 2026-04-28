@@ -232,13 +232,14 @@ function Partnerprofilepage() {
     try {
       const approvedDate = new Date().toLocaleDateString("vi-VN");
 
-      // 1. Cập nhật partner → approved + level 1
+      // 1. Cập nhật partner → approved + level 1 + refLink (cấp 1 cũng có link giới thiệu)
       await partnerService.update(partner.id, {
         ...partner,
         status:     "approved",
         level:      1,
         levelLabel: "Cấp 1",
         joinDate:   approvedDate,
+        refLink:    partner.refLink || `sivip.vn/ref/${partner.code}`,
       });
 
       // 2. Có userId → kích hoạt + đồng bộ thông tin user liên kết
@@ -315,7 +316,12 @@ function Partnerprofilepage() {
       setPartners((prev) =>
         prev.map((p) =>
           p.id === partner.id
-            ? { ...p, status: "approved", level: 1, levelLabel: "Cấp 1", joinDate: approvedDate }
+            ? {
+                ...p,
+                status: "approved", level: 1, levelLabel: "Cấp 1",
+                joinDate: approvedDate,
+                refLink: p.refLink || `sivip.vn/ref/${p.code}`,
+              }
             : p
         )
       );
