@@ -97,24 +97,34 @@ function UpgradeApproveModal({ req, onClose, onSubmit }) {
 ══════════════════════════════════════════════ */
 /**
  * classify(partner) → loại "diện" hiển thị cho admin:
- *   - INDEPENDENT, parentId=null   → "Tự do hoạt động riêng lẻ"
- *   - NORMAL,      parentId=null   → "Tự do chờ xếp nhánh"
- *   - khác (NORMAL/PARTNER có parent) → "Đã có cấp trên"
+ *   - INDEPENDENT (bất kể parentId)        → "Tự do riêng lẻ"
+ *   - parentId set                         → "Đã có cấp trên"
+ *   - parentId null + NORMAL/PARTNER       → "Chờ xếp nhánh"
+ *
+ * Chú ý: PARTNER (đã nâng tier) không có parent vẫn xếp vào "Chờ xếp nhánh".
+ * Lý do: filter dựa trên parentId — admin click "Đã có cấp trên" CHỈ thấy
+ * các partner có parentId thật (không lẫn root).
  */
 function classifyPartner(p) {
   const mt = p.memberType || "NORMAL";
-  if (mt === "INDEPENDENT" && !p.parentId) {
+  if (mt === "INDEPENDENT") {
     return { key: "independent", label: "Tự do riêng lẻ", color: "#0ea5e9" };
   }
-  if (mt === "NORMAL" && !p.parentId) {
-    return { key: "awaiting", label: "Chờ xếp nhánh", color: "#f97316" };
+  if (p.parentId) {
+    return { key: "in_tree", label: "Đã có cấp trên", color: "#16a34a" };
   }
-  return { key: "in_tree", label: "Đã có cấp trên", color: "#16a34a" };
+  return { key: "awaiting", label: "Chờ xếp nhánh", color: "#f97316" };
 }
 
 function PartnerTable({ data, onRowClick, extraColumns = [] }) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(data.length / PAGE_SIZE);
+
+  // Khi data đổi (do filter/search) mà page hiện tại > totalPages → reset về 1
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(1);
+  }, [totalPages, page]);
+
   const pageData   = data.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
@@ -562,13 +572,17 @@ function Partnerprofilepage() {
       .some((f) => f.toLowerCase().includes(q));
   };
 
-  const approvedAll     = partners.filter((p) => p.status === "approved" && matchSearch(p));
+  // Sort id giảm dần — bản ghi mới nhất luôn lên đầu
+  const sortByNewest = (arr) =>
+    [...arr].sort((a, b) => Number(b.id) - Number(a.id));
+
+  const approvedAll     = sortByNewest(partners.filter((p) => p.status === "approved" && matchSearch(p)));
   const approved        = classFilter === "all"
     ? approvedAll
     : approvedAll.filter((p) => classifyPartner(p).key === classFilter);
-  const pending         = partners.filter((p) => p.status === "pending");
-  const pendingUpgrades = upgradeRequests.filter((r) => r.status === "pending");
-  const pendingJoin     = joinRequests.filter((r) => r.status === "pending");
+  const pending         = sortByNewest(partners.filter((p) => p.status === "pending"));
+  const pendingUpgrades = sortByNewest(upgradeRequests.filter((r) => r.status === "pending"));
+  const pendingJoin     = sortByNewest(joinRequests.filter((r) => r.status === "pending"));
 
   // Đếm theo diện cho pill badge
   const classCounts = {

@@ -145,37 +145,31 @@ function Customercontractdetail({ isAdmin = false }) {
           </div>
         )}
 
-        {/* Row 6: File hợp đồng + nút xem trước PDF */}
+        {/* Row 6: File hợp đồng — toàn box click để xem trước, giống HĐ đối tác */}
         <div className="cc-detail-row cc-detail-row--last">
-          <div className="cc-file-box">
+          <div
+            className="cc-file-box"
+            onClick={() => setShowPDF(true)}
+            title="Click để xem hợp đồng"
+            style={{ cursor: "pointer" }}
+          >
             <div className="cc-file-left">
               <div className="cc-file-icon">📄</div>
               <div>
                 <p className="cc-file-name">{contract.contractFile || `${contract.code}.pdf`}</p>
-                <p className="cc-file-sub">Click "Xem trước" để xem nội dung hợp đồng dạng PDF</p>
+                <p className="cc-file-sub">Click để xem · Hợp đồng dịch vụ ĐT-KH</p>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => setShowPDF(true)}
-                style={{
-                  padding: "8px 16px", borderRadius: 8,
-                  background: "#0d9488", color: "#fff",
-                  border: "none", fontWeight: 600, cursor: "pointer",
-                }}
+            {contract.contractFile && (
+              <a
+                href={`/${contract.contractFile}`}
+                download
+                className="cc-btn-download"
+                onClick={(e) => e.stopPropagation()}
               >
-                👁 Xem trước
-              </button>
-              {contract.contractFile && (
-                <a
-                  href={`/${contract.contractFile}`}
-                  download
-                  className="cc-btn-download"
-                >
-                  ⬇ Tải xuống
-                </a>
-              )}
-            </div>
+                ⬇ Tải xuống
+              </a>
+            )}
           </div>
         </div>
       </div>

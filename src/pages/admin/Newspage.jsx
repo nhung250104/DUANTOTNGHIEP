@@ -32,12 +32,14 @@ function NewsPage() {
     fetchNews();
   }, []);
 
-  // Lọc
-  const filtered = posts.filter(p => {
-    const matchCat = category === "Tất cả" || p.category === category;
-    const matchSearch = p.title?.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  // Lọc + sort id giảm dần (mới nhất lên đầu)
+  const filtered = posts
+    .filter(p => {
+      const matchCat = category === "Tất cả" || p.category === category;
+      const matchSearch = p.title?.toLowerCase().includes(search.toLowerCase());
+      return matchCat && matchSearch;
+    })
+    .sort((a, b) => Number(b.id) - Number(a.id));
 
   const openCreate = () => {
     setEditPost(null);

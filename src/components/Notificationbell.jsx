@@ -107,8 +107,17 @@ function NotificationBell() {
   };
 
   const handleMarkAll = async () => {
-    try { await notificationService.markAllRead(); } catch { /* ignore */ }
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    // Chỉ mark đã đọc cho các noti thuộc về user hiện tại (không động vào noti
+    // của người khác như bug cũ với markAllRead toàn cục).
+    const targets = visible.filter((n) => !n.read);
+    try {
+      await Promise.all(
+        targets.map((n) => notificationService.markRead(n.id))
+      );
+    } catch { /* ignore */ }
+    setNotifications((prev) =>
+      prev.map((n) => (targets.find((t) => t.id === n.id) ? { ...n, read: true } : n))
+    );
   };
 
   return (

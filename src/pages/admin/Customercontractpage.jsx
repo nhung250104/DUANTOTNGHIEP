@@ -358,9 +358,16 @@ function CustomerContractPage({ isAdmin = false }) {
     }
 
     return true;
-  });
+  })
+  // mới nhất lên đầu
+  .sort((a, b) => Number(b.id) - Number(a.id));
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(1);
+  }, [totalPages, page]);
+
   const pageData   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const resetPage = () => setPage(1);

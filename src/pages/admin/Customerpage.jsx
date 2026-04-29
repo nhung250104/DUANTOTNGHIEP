@@ -230,17 +230,26 @@ function Customerpage({ isAdmin = false }) {
     return (c) => byUserId.get(String(c.userId)) || null;
   }, [partners, isAdmin]);
 
-  /* ── Filter / paginate ── */
-  const filtered = customers.filter((c) => {
-    if (status && c.status !== status) return false;
-    const q = search.trim().toLowerCase();
-    if (q) {
-      const haystack = [c.name, c.phone, c.email, c.address].filter(Boolean).join(" ").toLowerCase();
-      if (!haystack.includes(q)) return false;
-    }
-    return true;
-  });
+  /* ── Filter / sort / paginate ── */
+  const filtered = customers
+    .filter((c) => {
+      if (status && c.status !== status) return false;
+      const q = search.trim().toLowerCase();
+      if (q) {
+        const haystack = [c.name, c.phone, c.email, c.address].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => Number(b.id) - Number(a.id)); // mới nhất lên đầu
+
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
+  // Reset page khi data shrink
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(1);
+  }, [totalPages, page]);
+
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const resetPage = () => setPage(1);
 
