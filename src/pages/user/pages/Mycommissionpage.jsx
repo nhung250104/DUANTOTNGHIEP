@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../../store/api";
 import useAuthStore from "../../../store/authStore";
 import "../../admin/Commissionpage.css";
@@ -27,6 +28,7 @@ const TYPE_LABEL = {
 const TYPE_COLOR = { L1: "teal", L2: "blue", L3: "purple" };
 
 function Mycommissionpage() {
+  const navigate    = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
 
   const [partner,  setPartner ] = useState(null);
@@ -155,6 +157,32 @@ function Mycommissionpage() {
             {months.map((m) => <option key={m} value={m}>Tháng {m}</option>)}
           </select>
         </div>
+      </div>
+
+      {/* Banner báo lỗi */}
+      <div style={{
+        margin: "0 0 14px",
+        padding: "12px 16px",
+        background: "#fff7ed", border: "1px solid #fed7aa",
+        borderRadius: 10,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        gap: 12,
+      }}>
+        <div style={{ fontSize: 13, color: "#9a3412" }}>
+          🛡️ Phát hiện hoa hồng <strong>bất thường</strong> (thiếu, sai số tiền, sai nguồn,...)?
+          Gửi yêu cầu kiểm tra để admin xem xét và điều chỉnh.
+        </div>
+        <button
+          onClick={() => navigate("/partner-contract")}
+          style={{
+            padding: "8px 16px", borderRadius: 8,
+            background: "#ea580c", color: "#fff",
+            border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          ⚠️ Báo lỗi hoa hồng
+        </button>
       </div>
 
       <div className="cp-table-section">

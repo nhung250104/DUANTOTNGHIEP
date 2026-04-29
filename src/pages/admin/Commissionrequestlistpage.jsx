@@ -1,12 +1,18 @@
 /**
  * src/pages/admin/Commissionrequestlistpage.jsx
  *
- * Admin xét duyệt yêu cầu chỉnh sửa hoa hồng từ đối tác.
- * - GET /commissionRequests
- * - Approve: cập nhật partner.commissionRates (hoặc đặt level/levelLabel mới
- *   theo bảng tương ứng) — ở đây chúng ta lưu rate trực tiếp vào partner
- *   để Partnercontractpage.jsx user và Commissionpage admin cùng đọc được.
- * - Reject : nhập lý do, mark request rejected.
+ * Admin xét duyệt YÊU CẦU KIỂM TRA / ĐIỀU CHỈNH HOA HỒNG.
+ *
+ * Luồng:
+ *   - User báo lỗi (errorType + description + evidenceFiles).
+ *   - Admin xem yêu cầu + minh chứng + commission history liên quan.
+ *   - Approve:
+ *       + nhập adjustmentAmount (VND, có thể âm/dương)
+ *       + tạo entry mới trong /commissionHistory (commissionType="adjustment")
+ *       + partner.commission += adjustmentAmount
+ *       + ghi systemLog
+ *       + notify user
+ *   - Reject: chọn lý do, ghi rejectReason, notify user.
  */
 
 import { useState, useEffect } from "react";
@@ -22,12 +28,23 @@ const STATUS_CFG = {
   rejected: { label: "Từ chối",   cls: "cc-badge--rejected" },
 };
 
+const ERROR_LABEL = {
+  missing:      "Thiếu hoa hồng",
+  wrong_amount: "Sai số tiền",
+  wrong_source: "Sai nguồn commission",
+  wrong_upline: "Sai tuyến trên",
+  other:        "Khác",
+};
+
 const REJECT_REASONS = [
-  "Chưa đủ doanh số tối thiểu",
-  "Tỉ lệ đề nghị vượt khung chính sách",
-  "Hồ sơ chưa rõ ràng",
+  "Không đủ căn cứ điều chỉnh",
+  "Hoa hồng đã được tính đúng theo quy định",
+  "Minh chứng không hợp lệ",
+  "Yêu cầu trùng lặp",
   "Lý do khác",
 ];
+
+const fmtMoney = (n) => new Intl.NumberFormat("vi-VN").format(n || 0);
 
 const getNow = () => {
   const d = new Date();
@@ -35,32 +52,71 @@ const getNow = () => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
-/* ─── Approve modal ─────────────────────────────── */
+/* ─── Approve modal: nhập adjustmentAmount ─────────────────── */
 function ApproveModal({ target, onClose, onConfirm, loading }) {
+  const [adjustment, setAdjustment] = useState("");
+  const [adminNote,  setAdminNote ] = useState("");
+  const [err,        setErr       ] = useState("");
+
+  const submit = () => {
+    const num = Number(String(adjustment).replace(/\D/g, "")) * (String(adjustment).trim().startsWith("-") ? -1 : 1);
+    if (!adjustment || isNaN(num) || num === 0) {
+      setErr("Vui lòng nhập số tiền điều chỉnh khác 0 (dương = bù thêm, âm = trừ).");
+      return;
+    }
+    setErr("");
+    onConfirm({ adjustmentAmount: num, adminNote: adminNote.trim() });
+  };
+
   return (
     <div className="cc-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="cc-modal">
+      <div className="cc-modal" style={{ maxWidth: 560 }}>
         <div className="cc-modal-header cc-modal-header--approve">
           <span className="cc-modal-icon">✓</span>
           <div>
-            <h3 className="cc-modal-title">Duyệt yêu cầu chỉnh sửa hoa hồng</h3>
-            <p className="cc-modal-sub">{target.partnerName}</p>
+            <h3 className="cc-modal-title">Duyệt yêu cầu kiểm tra hoa hồng</h3>
+            <p className="cc-modal-sub">{target.partnerName} · {ERROR_LABEL[target.errorType] || target.errorTypeLabel || "—"}</p>
           </div>
         </div>
         <div className="cc-modal-body">
-          <div className="cc-modal-info-box">
-            Tỉ lệ hoa hồng của đối tác <strong>{target.partnerName}</strong> sẽ được cập nhật:
-            <div style={{ marginTop: 10, display: "grid", gap: 6, fontSize: 13 }}>
-              <div>Cấp 1: <strong>{target.currentL1}%</strong> → <strong style={{ color: "#0d9488" }}>{target.requestedL1 ?? target.currentL1}%</strong></div>
-              <div>Cấp 2: <strong>{target.currentL2}%</strong> → <strong style={{ color: "#0d9488" }}>{target.requestedL2 ?? target.currentL2}%</strong></div>
-              <div>Cấp 3: <strong>{target.currentL3}%</strong> → <strong style={{ color: "#0d9488" }}>{target.requestedL3 ?? target.currentL3}%</strong></div>
-            </div>
+          {err && <p className="cc-modal-err">{err}</p>}
+
+          <div className="cc-modal-info-box" style={{ background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa" }}>
+            <strong>Mô tả của user:</strong>
+            <p style={{ margin: "6px 0 0", whiteSpace: "pre-wrap" }}>{target.description || "—"}</p>
+            {target.relatedContractCode && (
+              <p style={{ marginTop: 8, fontSize: 12 }}>📄 HĐ liên quan: <strong>{target.relatedContractCode}</strong></p>
+            )}
           </div>
+
+          <label className="cc-modal-label" style={{ marginTop: 14 }}>
+            Số tiền điều chỉnh (VNĐ) <span className="cc-req">*</span>
+          </label>
+          <input
+            className="cc-modal-select"
+            placeholder="Dương = bù thêm cho user, âm = trừ. VD: 5000000 hoặc -200000"
+            value={adjustment}
+            onChange={(e) => setAdjustment(e.target.value)}
+          />
+          {adjustment && !isNaN(Number(adjustment)) && Number(adjustment) !== 0 && (
+            <p style={{ fontSize: 12, color: Number(adjustment) >= 0 ? "#15803d" : "#b91c1c", marginTop: 4 }}>
+              {Number(adjustment) >= 0 ? "+ " : ""}{fmtMoney(Number(adjustment))} đ sẽ được cộng vào hoa hồng tích luỹ của user.
+            </p>
+          )}
+
+          <label className="cc-modal-label" style={{ marginTop: 14 }}>Ghi chú của admin</label>
+          <textarea
+            className="cc-modal-textarea"
+            placeholder="Lý do điều chỉnh, căn cứ tính toán..."
+            rows={3}
+            value={adminNote}
+            onChange={(e) => setAdminNote(e.target.value)}
+          />
         </div>
         <div className="cc-modal-footer">
-          <button className="cc-btn-cancel"  onClick={onClose}   disabled={loading}>✕ Hủy</button>
-          <button className="cc-btn-confirm" onClick={onConfirm} disabled={loading}>
-            {loading ? "Đang xử lý..." : "✓ Đồng ý"}
+          <button className="cc-btn-cancel"  onClick={onClose} disabled={loading}>✕ Hủy</button>
+          <button className="cc-btn-confirm" onClick={submit}  disabled={loading}>
+            {loading ? "Đang xử lý..." : "✓ Tạo điều chỉnh"}
           </button>
         </div>
       </div>
@@ -162,39 +218,84 @@ function Commissionrequestlistpage() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleApprove = async () => {
+  const handleApprove = async ({ adjustmentAmount, adminNote }) => {
     if (!approveTarget) return;
     setModalLoading(true);
     try {
-      // Cập nhật rate trên partner để Partnercontractpage user đọc
-      const pRes = await api.get(`/partners/${approveTarget.partnerId}`);
-      const partner = pRes.data;
-      if (partner) {
-        await api.put(`/partners/${approveTarget.partnerId}`, {
-          ...partner,
-          commissionRates: {
-            l1: approveTarget.requestedL1 ?? approveTarget.currentL1,
-            l2: approveTarget.requestedL2 ?? approveTarget.currentL2,
-            l3: approveTarget.requestedL3 ?? approveTarget.currentL3,
-          },
-        });
-      }
-      const updated = { ...approveTarget, status: "approved", processedAt: getNow() };
+      // 1. Cập nhật commissionHistory: thêm 1 entry kiểu "adjustment" — bất biến.
+      const histRes = await api.get("/commissionHistory");
+      const histList = Array.isArray(histRes.data) ? histRes.data : [];
+      const histIds = histList.map((x) => Number(x.id)).filter((n) => !isNaN(n));
+      const newHistId = String((histIds.length > 0 ? Math.max(...histIds) : 0) + 1);
+      await api.post("/commissionHistory", {
+        id:                newHistId,
+        partnerId:         String(approveTarget.partnerId),
+        partnerName:       approveTarget.partnerName,
+        sourcePartnerId:   String(approveTarget.partnerId),
+        sourcePartnerName: approveTarget.partnerName,
+        contractId:        null,
+        contractCode:      approveTarget.relatedContractCode || `ADJ-${approveTarget.id}`,
+        contractValue:     0,
+        commissionType:    "ADJ",         // adjustment record
+        rate:              0,
+        commissionAmount:  adjustmentAmount,
+        adjustmentRequestId: approveTarget.id,
+        adjustmentNote:    adminNote || `Điều chỉnh theo yêu cầu #${approveTarget.id}: ${ERROR_LABEL[approveTarget.errorType] || approveTarget.errorTypeLabel || ""}`,
+        createdAt:         getNow(),
+      });
+
+      // 2. Cập nhật partner.commission += adjustmentAmount
+      try {
+        const pRes = await api.get(`/partners/${approveTarget.partnerId}`);
+        const partner = pRes.data;
+        if (partner) {
+          await api.put(`/partners/${approveTarget.partnerId}`, {
+            ...partner,
+            commission: (Number(partner.commission) || 0) + adjustmentAmount,
+          });
+
+          // Notify user
+          if (partner.userId) {
+            await notify({
+              recipientType:   "user",
+              recipientUserId: partner.userId,
+              type:            "commission_approved",
+              title:           "Yêu cầu kiểm tra hoa hồng được duyệt",
+              message:         `Admin đã điều chỉnh ${adjustmentAmount >= 0 ? "+" : ""}${fmtMoney(adjustmentAmount)} đ vào hoa hồng tích luỹ của bạn. ${adminNote ? `Ghi chú: ${adminNote}` : ""}`,
+              link:            "/my-commission",
+              partnerId:       approveTarget.partnerId,
+              partnerName:     approveTarget.partnerName,
+            });
+          }
+        }
+      } catch (e) { console.warn("Update partner.commission failed:", e); }
+
+      // 3. Cập nhật request
+      const updated = {
+        ...approveTarget,
+        status:           "approved",
+        processedAt:      getNow(),
+        adjustmentAmount,
+        adminNote,
+      };
       await api.put(`/commissionRequests/${approveTarget.id}`, updated);
 
-      // Notify user
-      if (partner?.userId) {
-        await notify({
-          recipientType:   "user",
-          recipientUserId: partner.userId,
-          type:            "commission_approved",
-          title:           "Yêu cầu chỉnh sửa hoa hồng được duyệt",
-          message:         `Tỉ lệ HH mới: L1 ${updated.requestedL1 ?? updated.currentL1}% / L2 ${updated.requestedL2 ?? updated.currentL2}% / L3 ${updated.requestedL3 ?? updated.currentL3}%`,
-          link:            "/partner-contract",
-          partnerId:       approveTarget.partnerId,
-          partnerName:     approveTarget.partnerName,
+      // 4. systemLog
+      try {
+        const slRes = await api.get("/systemLogs");
+        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
+          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
+        await api.post("/systemLogs", {
+          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
+          type:       "approve_commission_adjustment",
+          actorId:    "",
+          actorName:  "admin",
+          targetId:   String(approveTarget.partnerId),
+          targetType: "partner",
+          description: `Điều chỉnh ${adjustmentAmount >= 0 ? "+" : ""}${fmtMoney(adjustmentAmount)}đ cho ${approveTarget.partnerName} (req #${approveTarget.id})${adminNote ? ` — ${adminNote}` : ""}`,
+          createdAt:  getNow(),
         });
-      }
+      } catch { /* ignore */ }
 
       setRequests((prev) => prev.map((r) => (r.id === approveTarget.id ? updated : r)));
       setApproveTarget(null);
@@ -253,8 +354,8 @@ function Commissionrequestlistpage() {
     <div className="cc-page">
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Yêu cầu chỉnh sửa hoa hồng</h1>
-          <p>Xét duyệt các yêu cầu điều chỉnh tỉ lệ hoa hồng từ đối tác</p>
+          <h1>Yêu cầu kiểm tra hoa hồng</h1>
+          <p>Xét duyệt các yêu cầu kiểm tra/điều chỉnh hoa hồng kèm minh chứng</p>
         </div>
       </div>
 
@@ -308,19 +409,23 @@ function Commissionrequestlistpage() {
                 <tr>
                   <th>Ngày gửi</th>
                   <th>Đối tác</th>
-                  <th>Hiện tại (L1/L2/L3)</th>
-                  <th>Đề xuất (L1/L2/L3)</th>
-                  <th>Lý do</th>
+                  <th>Loại lỗi</th>
+                  <th>Mô tả & HĐ liên quan</th>
+                  <th>Minh chứng</th>
+                  <th>Điều chỉnh</th>
                   <th>Trạng thái</th>
                   {tab === "pending" && <th>Thao tác</th>}
                 </tr>
               </thead>
               <tbody>
                 {pageData.length === 0 ? (
-                  <tr><td colSpan={tab === "pending" ? 7 : 6} className="cc-empty">Không có yêu cầu nào</td></tr>
+                  <tr><td colSpan={tab === "pending" ? 8 : 7} className="cc-empty">Không có yêu cầu nào</td></tr>
                 ) : (
                   pageData.map((r) => {
                     const cfg = STATUS_CFG[r.status] || STATUS_CFG.pending;
+                    const errLbl = ERROR_LABEL[r.errorType] || r.errorTypeLabel || "—";
+                    const desc = r.description || r.requestDetail || "";
+                    const files = Array.isArray(r.evidenceFiles) ? r.evidenceFiles : [];
                     return (
                       <tr key={r.id} className="cc-row">
                         <td>{r.createdAt}</td>
@@ -328,23 +433,61 @@ function Commissionrequestlistpage() {
                           <div>{r.partnerName}</div>
                           <div style={{ fontSize: 11, color: "#94a3b8" }}>{r.partnerCode}</div>
                         </td>
-                        <td>{r.currentL1}% / {r.currentL2}% / {r.currentL3}%</td>
-                        <td style={{ color: "#0d9488", fontWeight: 600 }}>
-                          {(r.requestedL1 ?? r.currentL1)}% / {(r.requestedL2 ?? r.currentL2)}% / {(r.requestedL3 ?? r.currentL3)}%
+                        <td>
+                          <span style={{
+                            display: "inline-block", padding: "3px 8px", borderRadius: 6,
+                            background: "#fef3c7", color: "#92400e", fontSize: 11, fontWeight: 600,
+                          }}>{errLbl}</span>
                         </td>
-                        <td style={{ maxWidth: 260 }}>
-                          <div style={{ whiteSpace: "normal", color: "#475569" }}>{r.requestDetail}</div>
+                        <td style={{ maxWidth: 280 }}>
+                          <div style={{ whiteSpace: "normal", color: "#475569", fontSize: 13 }}>{desc || "—"}</div>
+                          {r.relatedContractCode && (
+                            <div style={{ marginTop: 4, fontSize: 11, color: "#0d9488" }}>📄 {r.relatedContractCode}</div>
+                          )}
                           {r.status === "rejected" && r.rejectReason && (
                             <div style={{ marginTop: 4, fontSize: 12, color: "#b91c1c" }}>
                               Lý do từ chối: {r.rejectReason}
                             </div>
                           )}
                         </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          {files.length === 0 ? (
+                            <span style={{ color: "#cbd5e1", fontSize: 12 }}>—</span>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                              {files.map((f, i) => (
+                                <a
+                                  key={i}
+                                  href={f.dataUrl || "#"}
+                                  download={f.name}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ fontSize: 11, color: "#0d9488", textDecoration: "underline" }}
+                                  title={f.name}
+                                >
+                                  📎 {f.name?.length > 24 ? f.name.slice(0, 22) + "..." : f.name}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {r.status === "approved" && r.adjustmentAmount != null ? (
+                            <div>
+                              <strong style={{ color: r.adjustmentAmount >= 0 ? "#15803d" : "#b91c1c" }}>
+                                {r.adjustmentAmount >= 0 ? "+" : ""}{fmtMoney(r.adjustmentAmount)} đ
+                              </strong>
+                              {r.adminNote && (
+                                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{r.adminNote}</div>
+                              )}
+                            </div>
+                          ) : <span style={{ color: "#cbd5e1" }}>—</span>}
+                        </td>
                         <td><span className={`cc-badge ${cfg.cls}`}>{cfg.label}</span></td>
                         {tab === "pending" && (
                           <td onClick={(e) => e.stopPropagation()}>
                             <div className="cc-action-btns">
-                              <button className="cc-btn-approve" onClick={() => setApproveTarget(r)}>Chấp nhận</button>
+                              <button className="cc-btn-approve" onClick={() => setApproveTarget(r)}>Duyệt</button>
                               <button className="cc-btn-reject"  onClick={() => setRejectTarget(r)}>Từ chối</button>
                             </div>
                           </td>
