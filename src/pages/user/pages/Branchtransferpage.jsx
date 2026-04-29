@@ -49,10 +49,26 @@ const STATUS_CFG = {
   rejected: { label: "Từ chối",   cls: "cc-badge--rejected" },
 };
 
+/* Build set tất cả id descendant (kể cả chính node) — dùng cho loop check */
+function collectDescendants(partners, rootId) {
+  const ids = new Set([String(rootId)]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const p of partners) {
+      if (p.parentId && ids.has(String(p.parentId)) && !ids.has(String(p.id))) {
+        ids.add(String(p.id));
+        changed = true;
+      }
+    }
+  }
+  return ids;
+}
+
 /* ═════════════════════════════════════════════════
    Modal: Tạo yêu cầu chuyển nhánh
 ═════════════════════════════════════════════════ */
-function CreateModal({ me, currentParent, onClose, onCreated }) {
+function CreateModal({ me, currentParent, allPartners, onClose, onCreated }) {
   const [newParentInput, setNewParentInput] = useState("");
   const [reason, setReason] = useState("");
   const [foundParent, setFoundParent] = useState(null);
@@ -62,7 +78,10 @@ function CreateModal({ me, currentParent, onClose, onCreated }) {
 
   const debounceRef = useRef(null);
 
-  /* Lookup new parent — chỉ approved + level >= 2 */
+  // Build descendants của me 1 lần (chống loop)
+  const myDescendants = collectDescendants(allPartners, me.id);
+
+  /* Lookup new parent — mọi partner approved (không phân biệt level) */
   useEffect(() => {
     const raw = newParentInput.trim();
     if (!raw) { setLookup("idle"); setFoundParent(null); return; }
@@ -79,17 +98,27 @@ function CreateModal({ me, currentParent, onClose, onCreated }) {
         const list = Array.isArray(res.data) ? res.data : [];
         const found = list[0] || null;
         if (!found) { setLookup("not_found"); return; }
-        if ((found.level || 1) < 2)            { setLookup("invalid"); setFoundParent(found); return; }
-        if (String(found.id) === String(me.id)){ setLookup("invalid"); setFoundParent(found); return; }
-        if (currentParent && String(found.id) === String(currentParent.id)) {
-          setLookup("invalid"); setFoundParent(found); return;
+
+        // Rule 1: không chuyển vào chính mình
+        if (String(found.id) === String(me.id)) { setLookup("self"); setFoundParent(found); return; }
+        // Rule 2: không chuyển vào con/cháu (loop)
+        if (myDescendants.has(String(found.id)) && String(found.id) !== String(me.id)) {
+          setLookup("descendant"); setFoundParent(found); return;
         }
+        // Đang chính là cấp trên hiện tại → vô nghĩa
+        if (currentParent && String(found.id) === String(currentParent.id)) {
+          setLookup("same_parent"); setFoundParent(found); return;
+        }
+        // INDEPENDENT không thể là cấp trên
+        if (found.memberType === "INDEPENDENT") { setLookup("invalid_type"); setFoundParent(found); return; }
+
         setFoundParent(found);
         setLookup("found");
       } catch { setLookup("not_found"); }
     }, 500);
 
     return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newParentInput, me, currentParent]);
 
   const handleSubmit = async () => {
@@ -120,6 +149,11 @@ function CreateModal({ me, currentParent, onClose, onCreated }) {
         rejectReason:       null,
       };
       await api.post("/branchTransferRequests", payload);
+
+      // Đánh dấu partner đang chờ chuyển nhánh — Orgchart sẽ hiện màu vàng
+      try {
+        await api.put(`/partners/${me.id}`, { ...me, transferStatus: "pending" });
+      } catch { /* ignore */ }
 
       try {
         const maxNotiId = await getMaxId("notifications");
@@ -183,25 +217,22 @@ function CreateModal({ me, currentParent, onClose, onCreated }) {
             <div style={{
               marginTop: 8, padding: "10px 12px", borderRadius: 8, fontSize: 13,
               background:
-                lookup === "found"     ? "#f0fdf4" :
-                lookup === "loading"   ? "#f8fafc" : "#fff5f5",
+                lookup === "found"   ? "#f0fdf4" :
+                lookup === "loading" ? "#f8fafc" : "#fff5f5",
               border: `1px solid ${
-                lookup === "found"     ? "#bbf7d0" :
-                lookup === "loading"   ? "#e2e8f0" : "#fecaca"
+                lookup === "found"   ? "#bbf7d0" :
+                lookup === "loading" ? "#e2e8f0" : "#fecaca"
               }`,
               color:
-                lookup === "found"     ? "#166534" :
-                lookup === "loading"   ? "#64748b" : "#b91c1c",
+                lookup === "found"   ? "#166534" :
+                lookup === "loading" ? "#64748b" : "#b91c1c",
             }}>
-              {lookup === "loading"   && "🔍 Đang tìm..."}
-              {lookup === "not_found" && "❌ Không tìm thấy đối tác phù hợp."}
-              {lookup === "invalid"   && (
-                String(foundParent?.id) === String(me.id)
-                  ? "❌ Bạn không thể chọn chính mình."
-                  : currentParent && String(foundParent?.id) === String(currentParent.id)
-                    ? "❌ Đây đang là cấp trên hiện tại của bạn."
-                    : "⚠️ Đối tác chưa đủ điều kiện làm cấp trên (yêu cầu Cấp 2 trở lên)."
-              )}
+              {lookup === "loading"      && "🔍 Đang tìm..."}
+              {lookup === "not_found"    && "❌ Không tìm thấy đối tác phù hợp."}
+              {lookup === "self"         && "❌ Bạn không thể chuyển vào chính mình."}
+              {lookup === "descendant"   && "❌ Không thể chuyển vào con/cháu (sẽ tạo vòng lặp trong cây)."}
+              {lookup === "same_parent"  && "❌ Đây đang là cấp trên hiện tại của bạn — chuyển không có ý nghĩa."}
+              {lookup === "invalid_type" && "❌ Đối tác này thuộc diện INDEPENDENT, không thể làm cấp trên."}
               {lookup === "found" && foundParent && (
                 <>✅ {foundParent.name} · {foundParent.levelLabel || `Cấp ${foundParent.level}`} · Mã: {foundParent.code}</>
               )}
@@ -376,6 +407,7 @@ function Branchtransferpage() {
         <CreateModal
           me={me}
           currentParent={currentParent}
+          allPartners={partners}
           onClose={() => setShowCreate(false)}
           onCreated={() => {
             setShowCreate(false);

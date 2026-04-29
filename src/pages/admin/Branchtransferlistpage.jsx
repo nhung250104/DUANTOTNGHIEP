@@ -9,8 +9,25 @@
 
 import { useState, useEffect } from "react";
 import api from "../../store/api";
+import useAuthStore from "../../store/authStore";
 import { notify } from "../../store/Notificationservice";
 import "./Customercontractpage.css";
+
+/* ─── Helper: collect descendants để chống vòng lặp ─── */
+function collectDescendants(partners, rootId) {
+  const ids = new Set([String(rootId)]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const p of partners) {
+      if (p.parentId && ids.has(String(p.parentId)) && !ids.has(String(p.id))) {
+        ids.add(String(p.id));
+        changed = true;
+      }
+    }
+  }
+  return ids;
+}
 
 const PAGE_SIZE = 10;
 
@@ -115,6 +132,7 @@ function RejectModal({ target, onClose, onConfirm, loading }) {
 
 /* ─── Page ──────────────────────────────────────── */
 function Branchtransferlistpage() {
+  const currentUser = useAuthStore((s) => s.user);
   const [requests, setRequests] = useState([]);
   const [loading,  setLoading ] = useState(true);
   const [error,    setError   ] = useState("");
@@ -163,18 +181,50 @@ function Branchtransferlistpage() {
     if (!approveTarget) return;
     setModalLoading(true);
     try {
-      const pRes = await api.get(`/partners/${approveTarget.partnerId}`);
-      const partner = pRes.data;
+      // 1. Lấy state mới nhất tránh stale + validate lại
+      const allRes = await api.get("/partners");
+      const all = Array.isArray(allRes.data) ? allRes.data : [];
+      const partner = all.find((p) => String(p.id) === String(approveTarget.partnerId));
       if (!partner) throw new Error("Không tìm thấy partner");
-      await api.put(`/partners/${approveTarget.partnerId}`, {
+
+      const newParentId = String(approveTarget.newParentId);
+      const newParent   = all.find((p) => String(p.id) === newParentId);
+      if (!newParent) {
+        alert("Cấp trên đề xuất không còn tồn tại.");
+        return;
+      }
+
+      // Validate rule 1 + 2 lại trước khi PUT
+      if (String(newParent.id) === String(partner.id)) {
+        alert("Không thể chuyển vào chính mình.");
+        return;
+      }
+      const descendants = collectDescendants(all, partner.id);
+      if (descendants.has(String(newParent.id))) {
+        alert("Cấp trên đề xuất nằm trong nhánh con của partner — sẽ tạo vòng lặp. Hủy duyệt.");
+        return;
+      }
+      if (newParent.memberType === "INDEPENDENT") {
+        alert("Đối tác đề xuất là INDEPENDENT, không thể làm cấp trên.");
+        return;
+      }
+
+      const oldParentId = partner.parentId;
+
+      // 2. PUT partner: đổi parentId + đánh dấu transferStatus="transferred" để Orgchart hiển thị xám
+      await api.put(`/partners/${partner.id}`, {
         ...partner,
-        parentId: approveTarget.newParentId,
+        parentId:       newParentId,
+        memberType:     "NORMAL",
+        transferStatus: "transferred",
       });
+
+      // 3. Update branchTransferRequest
       const updated = { ...approveTarget, status: "approved", processedAt: getNow() };
       await api.put(`/branchTransferRequests/${approveTarget.id}`, updated);
 
-      // Notify user
-      if (partner?.userId) {
+      // 4. Notify user
+      if (partner.userId) {
         await notify({
           recipientType:   "user",
           recipientUserId: partner.userId,
@@ -186,6 +236,25 @@ function Branchtransferlistpage() {
           partnerName:     approveTarget.partnerName,
         });
       }
+
+      // 5. systemLog
+      try {
+        const slRes = await api.get("/systemLogs");
+        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
+          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
+        await api.post("/systemLogs", {
+          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
+          type:       "approve_branch_transfer",
+          actorId:    String(currentUser?.id || ""),
+          actorName:  currentUser?.name || "admin",
+          targetId:   String(partner.id),
+          targetType: "partner",
+          description: `Chuyển ${partner.name} từ ${approveTarget.currentParentName || "(gốc)"} sang ${approveTarget.newParentName}.`,
+          createdAt:  getNow(),
+        });
+      } catch { /* ignore */ }
+
+      // (F1 không cần update tay — Orgchart đếm động từ parentId. Tree tự rebuild khi reload.)
 
       setRequests((prev) => prev.map((r) => (r.id === approveTarget.id ? updated : r)));
       setApproveTarget(null);
@@ -209,6 +278,20 @@ function Branchtransferlistpage() {
       };
       await api.put(`/branchTransferRequests/${rejectTarget.id}`, updated);
 
+      // Clear transferStatus="pending" trên partner (chỉ khi không còn yêu cầu pending khác)
+      try {
+        const pRes = await api.get(`/partners/${rejectTarget.partnerId}`);
+        const partner = pRes.data;
+        if (partner) {
+          // Kiểm tra còn pending khác không
+          const otherRes = await api.get(`/branchTransferRequests?partnerId=${partner.id}&status=pending`);
+          const otherList = Array.isArray(otherRes.data) ? otherRes.data : [];
+          if (otherList.length === 0 && partner.transferStatus === "pending") {
+            await api.put(`/partners/${partner.id}`, { ...partner, transferStatus: null });
+          }
+        }
+      } catch { /* ignore */ }
+
       // Notify user
       try {
         const pRes = await api.get(`/partners/${rejectTarget.partnerId}`);
@@ -225,6 +308,23 @@ function Branchtransferlistpage() {
             partnerName:     rejectTarget.partnerName,
           });
         }
+      } catch { /* ignore */ }
+
+      // systemLog
+      try {
+        const slRes = await api.get("/systemLogs");
+        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
+          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
+        await api.post("/systemLogs", {
+          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
+          type:       "reject_branch_transfer",
+          actorId:    String(currentUser?.id || ""),
+          actorName:  currentUser?.name || "admin",
+          targetId:   String(rejectTarget.partnerId),
+          targetType: "partner",
+          description: `Từ chối chuyển nhánh ${rejectTarget.partnerName}: ${reason}${detail ? ` — ${detail}` : ""}`,
+          createdAt:  getNow(),
+        });
       } catch { /* ignore */ }
 
       setRequests((prev) => prev.map((r) => (r.id === rejectTarget.id ? updated : r)));
