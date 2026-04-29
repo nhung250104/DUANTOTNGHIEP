@@ -84,6 +84,7 @@ function Userspage() {
   const [error,     setError    ] = useState("");
   const [page,      setPage     ] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [search,    setSearch   ] = useState("");
 
   /* ── Fetch ── */
   const fetchUsers = async () => {
@@ -126,9 +127,16 @@ function Userspage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  /* ── Sort: id số giảm dần (mới nhất lên đầu), bỏ id chữ ── */
+  /* ── Filter + sort: theo search, id số giảm dần ── */
   const sortedUsers = [...users]
     .filter((u) => !isNaN(Number(u.id)) && Number(u.id) > 0)
+    .filter((u) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      return [u.name, u.email, u.phone, u.role, u.id]
+        .filter(Boolean)
+        .some((f) => String(f).toLowerCase().includes(q));
+    })
     .sort((a, b) => Number(b.id) - Number(a.id));
 
   const totalPages = Math.ceil(sortedUsers.length / PAGE_SIZE);
@@ -143,9 +151,21 @@ function Userspage() {
           <h1>Danh sách người dùng</h1>
           <p>Quản lý tất cả tài khoản trong hệ thống</p>
         </div>
-        <button className="btn-create" onClick={() => setShowModal(true)}>
-          + Thêm người dùng
-        </button>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <input
+            type="search"
+            placeholder="Tìm theo tên, email, SĐT, role..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{
+              padding: "8px 12px", borderRadius: 8, minWidth: 260,
+              border: "1px solid #cbd5e1", fontSize: 13, background: "#fff",
+            }}
+          />
+          <button className="btn-create" onClick={() => setShowModal(true)}>
+            + Thêm người dùng
+          </button>
+        </div>
       </div>
 
       {loading && (

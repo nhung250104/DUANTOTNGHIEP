@@ -128,6 +128,8 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
               <th>Họ và tên</th>
               <th>Số điện thoại</th>
               <th>Địa chỉ</th>
+              <th>Cấp (cây)</th>
+              <th>Hạng</th>
               <th>Diện</th>
               {extraColumns.map((c) => <th key={c.key}>{c.label}</th>)}
             </tr>
@@ -135,7 +137,7 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
           <tbody>
             {pageData.length === 0 ? (
               <tr>
-                <td colSpan={6 + extraColumns.length} className="pp-empty">
+                <td colSpan={8 + extraColumns.length} className="pp-empty">
                   Không có dữ liệu
                 </td>
               </tr>
@@ -148,6 +150,24 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
                   <td>{row.name}</td>
                   <td>{row.phone}</td>
                   <td>{row.address}</td>
+                  <td>
+                    <span style={{
+                      display: "inline-block", padding: "2px 8px", borderRadius: 6,
+                      background: "#e0f2fe", color: "#075985", fontSize: 11, fontWeight: 600,
+                    }}>
+                      {row.levelLabel || (row.level != null ? `Cấp ${row.level}` : "—")}
+                    </span>
+                  </td>
+                  <td>
+                    {row.tier ? (
+                      <span style={{
+                        display: "inline-block", padding: "2px 8px", borderRadius: 6,
+                        background: "#fef3c7", color: "#92400e", fontSize: 11, fontWeight: 600,
+                      }}>
+                        {row.tierLabel || `Hạng ${row.tier}`}
+                      </span>
+                    ) : <span style={{ color: "#cbd5e1" }}>—</span>}
+                  </td>
                   <td>
                     <span style={{
                       display: "inline-block",
@@ -197,6 +217,7 @@ function Partnerprofilepage() {
   const [tab, setTab] = useState("approved");
   // Filter "diện" cho tab approved: all | independent | awaiting | in_tree
   const [classFilter, setClassFilter] = useState("all");
+  const [search,      setSearch]      = useState("");
 
   const [partners,        setPartners       ] = useState([]);
   const [upgradeRequests, setUpgradeRequests] = useState([]);
@@ -532,7 +553,16 @@ function Partnerprofilepage() {
   };
 
   /* ── Derived lists ── */
-  const approvedAll     = partners.filter((p) => p.status === "approved");
+  // Tìm kiếm theo tên / mã / SĐT / email
+  const matchSearch = (p) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [p.name, p.code, p.phone, p.email, p.address]
+      .filter(Boolean)
+      .some((f) => f.toLowerCase().includes(q));
+  };
+
+  const approvedAll     = partners.filter((p) => p.status === "approved" && matchSearch(p));
   const approved        = classFilter === "all"
     ? approvedAll
     : approvedAll.filter((p) => classifyPartner(p).key === classFilter);
@@ -557,6 +587,18 @@ function Partnerprofilepage() {
         <div className="page-header-left">
           <h1>Danh sách hồ sơ đối tác</h1>
           <p>Danh sách đối tác và yêu cầu trở thành đối tác</p>
+        </div>
+        <div style={{ minWidth: 280 }}>
+          <input
+            type="search"
+            placeholder="Tìm theo tên, mã, SĐT, email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%", padding: "8px 12px", borderRadius: 8,
+              border: "1px solid #cbd5e1", fontSize: 13, background: "#fff",
+            }}
+          />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
+import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
 import "./Orgchartpage.css";
 
@@ -37,45 +38,43 @@ function assignRelLevel(node, rel = 1) {
 /* ══════════════════════════════════════════════
    TreeRow – một dòng trong list
 ══════════════════════════════════════════════ */
-function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter }) {
+function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter, ghostsByOldParent = {} }) {
   const hasChildren = node.children?.length > 0;
   const isExpanded  = expandedIds.has(node.id);
   const relLevel    = node._rel ?? 1;
 
+  // Ghost rows: user trước đây ở dưới node này nhưng đã chuyển nhánh khác.
+  const ghosts = ghostsByOldParent[String(node.id)] || [];
+  const showChildren = hasChildren || ghosts.length > 0;
+
   // Lọc cấp: nếu levelFilter > 0 chỉ hiện đúng cấp đó
   if (levelFilter > 0 && relLevel !== levelFilter) {
-    // vẫn render children để không mất nhánh, nhưng bản thân ẩn
-    if (!hasChildren) return null;
+    if (!showChildren) return null;
   }
 
   // Không render sâu hơn maxDepth
   if (depth > maxDepth) return null;
 
   const isRoot      = depth === 1;
-  const isTransferred = node.transferStatus === "transferred"; // "Đã chuyển qua nhánh khác"
-  const isPending     = node.transferStatus === "pending";     // "Yêu cầu chuyển nhánh"
+  const isPending   = node.transferStatus === "pending";   // user đang chờ chuyển nhánh
+  // Lưu ý: không còn dùng isTransferred ở vị trí mới — ghost hiển thị ở vị trí cũ.
 
   return (
     <>
       <div
-        className={`oc-row ${isRoot ? "oc-row--root" : ""} ${isTransferred ? "oc-row--transferred" : ""}`}
+        className={`oc-row ${isRoot ? "oc-row--root" : ""}`}
         style={{ paddingLeft: `${(depth - 1) * 24 + 12}px` }}
       >
-        {/* Toggle button */}
         <button
-          className={`oc-row-toggle ${!hasChildren ? "oc-row-toggle--leaf" : ""}`}
-          onClick={() => hasChildren && onToggle(node.id)}
-          disabled={!hasChildren}
+          className={`oc-row-toggle ${!showChildren ? "oc-row-toggle--leaf" : ""}`}
+          onClick={() => showChildren && onToggle(node.id)}
+          disabled={!showChildren}
         >
-          {hasChildren ? (isExpanded ? "−" : "+") : "+"}
+          {showChildren ? (isExpanded ? "−" : "+") : "+"}
         </button>
 
-        {/* Name */}
-        <span className={`oc-row-name ${isTransferred ? "oc-row-name--muted" : ""}`}>
-          {node.name}
-        </span>
+        <span className="oc-row-name">{node.name}</span>
 
-        {/* Badges */}
         <div className="oc-row-badges">
           <span className="oc-badge oc-badge--code">#{node.code}</span>
           <span className="oc-badge oc-badge--contract">
@@ -85,21 +84,13 @@ function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter }) 
             </svg>
             {node.contracts ?? 0} HĐ
           </span>
-          <span className="oc-badge oc-badge--commission">
-            $ {fmt(node.commission)}
-          </span>
+          <span className="oc-badge oc-badge--commission">$ {fmt(node.commission)}</span>
         </div>
 
-        {/* Warning tags */}
-        {isPending && (
-          <span className="oc-warn oc-warn--pending">⚠ Yêu cầu chuyển nhánh</span>
-        )}
-        {isTransferred && (
-          <span className="oc-warn oc-warn--transferred">⚠ Đã chuyển qua nhánh khác</span>
-        )}
+        {isPending && <span className="oc-warn oc-warn--pending">⚠ Yêu cầu chuyển nhánh</span>}
       </div>
 
-      {/* Children */}
+      {/* Children thật */}
       {hasChildren && isExpanded &&
         node.children.map((child) => (
           <TreeRow
@@ -110,9 +101,29 @@ function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter }) 
             expandedIds={expandedIds}
             onToggle={onToggle}
             levelFilter={levelFilter}
+            ghostsByOldParent={ghostsByOldParent}
           />
         ))
       }
+
+      {/* Ghost rows: user đã chuyển đi (hiển thị ở cha cũ) */}
+      {isExpanded && ghosts.map((g) => (
+        <div
+          key={`ghost-${g.requestId}`}
+          className="oc-row oc-row--transferred"
+          style={{ paddingLeft: `${depth * 24 + 12}px` }}
+        >
+          <button className="oc-row-toggle oc-row-toggle--leaf" disabled>·</button>
+          <span className="oc-row-name oc-row-name--muted">{g.partnerName}</span>
+          <div className="oc-row-badges">
+            <span className="oc-badge oc-badge--code">#{g.partnerCode}</span>
+          </div>
+          <span className="oc-warn oc-warn--transferred">
+            ⚠ Đã chuyển qua nhánh {g.newParentName ? `"${g.newParentName}"` : "khác"}
+            {g.processedAt ? ` · ${g.processedAt}` : ""}
+          </span>
+        </div>
+      ))}
     </>
   );
 }
@@ -191,6 +202,7 @@ function Orgchartpage({ userMode = false } = {}) {
   const navigate    = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const [allPartners, setAllPartners] = useState([]);
+  const [transferRequests, setTransferRequests] = useState([]);
   const [loading,     setLoading    ] = useState(true);
   const [error,       setError      ] = useState("");
 
@@ -203,13 +215,18 @@ function Orgchartpage({ userMode = false } = {}) {
 
   const searchRef = useRef();
 
-  /* ── Fetch ── */
+  /* ── Fetch partners + branch transfer requests (cho ghost nodes) ── */
   useEffect(() => {
     (async () => {
       try {
-        const res  = await partnerService.getAll();
-        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        setAllPartners(list.filter((p) => p.status === "approved"));
+        const [pRes, tRes] = await Promise.all([
+          partnerService.getAll(),
+          api.get("/branchTransferRequests"),
+        ]);
+        const pList = Array.isArray(pRes.data) ? pRes.data : pRes.data?.data || [];
+        const tList = Array.isArray(tRes.data) ? tRes.data : [];
+        setAllPartners(pList.filter((p) => p.status === "approved"));
+        setTransferRequests(tList.filter((t) => t.status === "approved"));
       } catch {
         setError("Không thể tải dữ liệu đối tác.");
       } finally {
@@ -218,24 +235,51 @@ function Orgchartpage({ userMode = false } = {}) {
     })();
   }, []);
 
-  /* ── User mode: tự chọn root theo user đang đăng nhập ── */
+  /* Ghost map: oldParentId → [{ requestId, partnerName, partnerCode, newParentName, processedAt }, …] */
+  const ghostsByOldParent = transferRequests.reduce((acc, t) => {
+    if (!t.currentParentId) return acc;
+    const key = String(t.currentParentId);
+    (acc[key] = acc[key] || []).push({
+      requestId:     t.id,
+      partnerName:   t.partnerName,
+      partnerCode:   t.partnerCode,
+      newParentName: t.newParentName,
+      processedAt:   t.processedAt,
+    });
+    return acc;
+  }, {});
+
+  /* ── User mode: hiển thị parent → me → my descendants ────────────────
+     - Nếu user có parent: root = clone parent có DUY NHẤT con là me
+       (không lộ siblings của me). me có đầy đủ subtree của mình.
+     - Nếu user là root (parentId=null): hiển thị me như root bình thường.
+  ────────────────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (!userMode || !currentUser || allPartners.length === 0) return;
     const me = allPartners.find(
       (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
     );
-    if (me) {
-      setSearchText(me.name);
-      const map  = buildMap(allPartners);
-      const root = map[me.id];
-      if (root) {
-        assignRelLevel(root, 1);
-        const initialExpanded = new Set([root.id]);
-        (root.children || []).forEach((c) => initialExpanded.add(c.id));
-        setExpandedIds(initialExpanded);
-        setRootNode(root);
-      }
+    if (!me) return;
+
+    setSearchText(me.name);
+    const map  = buildMap(allPartners);
+    const meNode = map[me.id];
+    if (!meNode) return;
+
+    let root;
+    if (me.parentId && map[me.parentId]) {
+      // Wrap: parent giả với DUY NHẤT 1 child = me (giữ nguyên subtree me)
+      const parentClone = { ...map[me.parentId], children: [meNode] };
+      root = parentClone;
+    } else {
+      root = meNode;
     }
+    assignRelLevel(root, 1);
+
+    const initialExpanded = new Set([root.id, meNode.id]);
+    (meNode.children || []).forEach((c) => initialExpanded.add(c.id));
+    setExpandedIds(initialExpanded);
+    setRootNode(root);
   }, [userMode, currentUser, allPartners]);
 
   /* ── Build tree khi root thay đổi ── */
@@ -425,6 +469,7 @@ function Orgchartpage({ userMode = false } = {}) {
               expandedIds={expandedIds}
               onToggle={onToggle}
               levelFilter={levelFilter}
+              ghostsByOldParent={ghostsByOldParent}
             />
           </div>
         </div>

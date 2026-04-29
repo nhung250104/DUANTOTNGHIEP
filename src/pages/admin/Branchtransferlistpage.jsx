@@ -211,7 +211,10 @@ function Branchtransferlistpage() {
 
       const oldParentId = partner.parentId;
 
-      // 2. PUT partner: đổi parentId + recompute level (tree depth) + transferStatus
+      // 2. PUT partner: đổi parentId + recompute level (tree depth)
+      //    Bỏ transferStatus — user đã ổn định ở nhánh mới, không phải "đang chuyển".
+      //    Ghost "Đã chuyển qua nhánh khác" sẽ hiển thị ở nhánh CŨ qua branchTransferRequests
+      //    (orgchart đọc requests có status=approved + currentParentId).
       const newLevel      = (Number(newParent.level) || 0) + 1;
       const newLevelLabel = newLevel <= 3 ? `Cấp ${newLevel}` : "Cấp .";
       await api.put(`/partners/${partner.id}`, {
@@ -220,7 +223,7 @@ function Branchtransferlistpage() {
         memberType:     "NORMAL",
         level:          newLevel,
         levelLabel:     newLevelLabel,
-        transferStatus: "transferred",
+        transferStatus: null,
       });
 
       // 2b. Recompute level cho mọi descendant của partner (cây đã đổi shape)
