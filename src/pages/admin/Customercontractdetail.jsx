@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../store/api";
+import CustomerContractPDFModal from "./Customercontractpdfmodal";
 import "./CustomerContractPage.css";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
@@ -35,6 +36,7 @@ function Customercontractdetail({ isAdmin = false }) {
   const [contract, setContract] = useState(null);
   const [loading,  setLoading ] = useState(true);
   const [error,    setError   ] = useState("");
+  const [showPDF,  setShowPDF ] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -143,33 +145,47 @@ function Customercontractdetail({ isAdmin = false }) {
           </div>
         )}
 
-        {/* Row 6: File hợp đồng */}
+        {/* Row 6: File hợp đồng + nút xem trước PDF */}
         <div className="cc-detail-row cc-detail-row--last">
-          {contract.contractFile ? (
-            <div className="cc-file-box">
-              <div className="cc-file-left">
-                <div className="cc-file-icon">📄</div>
-                <div>
-                  <p className="cc-file-name">{contract.contractFile}</p>
-                  <p className="cc-file-sub">2.4 MB</p>
-                </div>
+          <div className="cc-file-box">
+            <div className="cc-file-left">
+              <div className="cc-file-icon">📄</div>
+              <div>
+                <p className="cc-file-name">{contract.contractFile || `${contract.code}.pdf`}</p>
+                <p className="cc-file-sub">Click "Xem trước" để xem nội dung hợp đồng dạng PDF</p>
               </div>
-              <a
-                href={`/${contract.contractFile}`}
-                download
-                className="cc-btn-download"
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setShowPDF(true)}
+                style={{
+                  padding: "8px 16px", borderRadius: 8,
+                  background: "#0d9488", color: "#fff",
+                  border: "none", fontWeight: 600, cursor: "pointer",
+                }}
               >
-                ⬇ Tải xuống
-              </a>
+                👁 Xem trước
+              </button>
+              {contract.contractFile && (
+                <a
+                  href={`/${contract.contractFile}`}
+                  download
+                  className="cc-btn-download"
+                >
+                  ⬇ Tải xuống
+                </a>
+              )}
             </div>
-          ) : (
-            <div className="cc-no-file">
-              <span>⚠️</span>
-              <p>Chưa có file hợp đồng.</p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
+
+      {showPDF && (
+        <CustomerContractPDFModal
+          contract={contract}
+          onClose={() => setShowPDF(false)}
+        />
+      )}
     </div>
   );
 }
