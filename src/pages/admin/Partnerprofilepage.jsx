@@ -4,6 +4,7 @@ import partnerService from "../../store/Partnerservice";
 import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
 import { notify } from "../../store/Notificationservice";
+import { autoPlaceOne, pickPlacement, DEFAULT_MAX_F1 } from "../../store/placementService";
 import "./Partnerprofilepage.css";
 
 const PAGE_SIZE = 17;
@@ -602,7 +603,7 @@ function Partnerprofilepage() {
           {tab === "approved" && (
             <>
               {/* Filter pills theo "Diện" */}
-              <div style={{ display: "flex", gap: 8, padding: "12px 0", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, padding: "12px 0", flexWrap: "wrap", alignItems: "center" }}>
                 {[
                   { key: "all",         label: "Tất cả",          color: "#475569" },
                   { key: "in_tree",     label: "Đã có cấp trên", color: "#16a34a" },
@@ -627,11 +628,39 @@ function Partnerprofilepage() {
                     </button>
                   );
                 })}
+
+                {/* Bulk auto-place khi đang xem "Chờ xếp nhánh" */}
+                {classFilter === "awaiting" && classCounts.awaiting > 0 && (
+                  <BulkAutoPlaceButton
+                    awaitingPartners={approved}
+                    allPartners={partners}
+                    currentUser={currentUser}
+                    onChange={fetchAll}
+                  />
+                )}
               </div>
 
               <PartnerTable
                 data={approved}
                 onRowClick={(id) => navigate(`/admin/partners-profile/${id}`)}
+                extraColumns={
+                  classFilter === "awaiting"
+                    ? [
+                        {
+                          key:   "auto",
+                          label: "Auto xếp",
+                          render: (row) => (
+                            <AutoPlaceButton
+                              partner={row}
+                              allPartners={partners}
+                              currentUser={currentUser}
+                              onChange={fetchAll}
+                            />
+                          ),
+                        },
+                      ]
+                    : []
+                }
               />
             </>
           )}
@@ -951,6 +980,168 @@ function JoinTeamTab({ requests, partners, currentUser, onChange }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   Auto-place: nút từng row (xếp 1 partner)
+══════════════════════════════════════════════ */
+function AutoPlaceButton({ partner, allPartners, currentUser, onChange }) {
+  const [busy, setBusy] = useState(false);
+
+  // Tính trước parent đề xuất để hiển thị tooltip
+  const suggested = pickPlacement(allPartners, partner, DEFAULT_MAX_F1);
+
+  const run = async () => {
+    if (!suggested) {
+      alert("Không tìm thấy cấp trên phù hợp (mọi node đã đầy hoặc chưa có node nào).");
+      return;
+    }
+    if (!window.confirm(`Tự động xếp "${partner.name}" làm F1 của "${suggested.name}" (cấp ${suggested.level})?`)) return;
+    setBusy(true);
+    try {
+      const res = await autoPlaceOne(partner, DEFAULT_MAX_F1);
+      if (!res.ok) {
+        alert(res.reason || "Xếp tự động thất bại.");
+        return;
+      }
+      // Notify user
+      if (partner.userId) {
+        await notify({
+          recipientType:   "user",
+          recipientUserId: partner.userId,
+          type:            "join_team_approved",
+          title:           "Bạn đã được gắn vào hệ thống",
+          message:         `Cấp trên của bạn: ${res.parent.name}. Bạn đã chuyển sang chế độ NORMAL.`,
+          link:            "/my-tree",
+          partnerId:       partner.id,
+          partnerName:     partner.name,
+        });
+      }
+      // systemLog
+      try {
+        const slRes = await api.get("/systemLogs");
+        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
+          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
+        await api.post("/systemLogs", {
+          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
+          type:       "auto_place_partner",
+          actorId:    String(currentUser?.id || ""),
+          actorName:  currentUser?.name || "admin",
+          targetId:   String(partner.id),
+          targetType: "partner",
+          description: `Auto-place ${partner.name} dưới ${res.parent.name} (id=${res.parent.id})`,
+          createdAt:  new Date().toLocaleDateString("vi-VN"),
+        });
+      } catch { /* ignore */ }
+
+      await onChange();
+    } catch (e) {
+      console.error(e);
+      alert("Xếp tự động thất bại.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={run}
+      disabled={busy || !suggested}
+      title={suggested ? `Đề xuất: ${suggested.name} (cấp ${suggested.level})` : "Không có cấp trên phù hợp"}
+      style={{
+        padding: "5px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+        border: "1px solid #0d9488", background: suggested ? "#0d9488" : "#94a3b8",
+        color: "#fff", cursor: suggested && !busy ? "pointer" : "not-allowed",
+      }}
+    >
+      {busy ? "..." : "→ Auto xếp"}
+    </button>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   Auto-place: nút bulk (xếp tất cả awaiting)
+══════════════════════════════════════════════ */
+function BulkAutoPlaceButton({ awaitingPartners, currentUser, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(null);
+
+  const run = async () => {
+    if (awaitingPartners.length === 0) return;
+    if (!window.confirm(`Tự động xếp ${awaitingPartners.length} đối tác đang chờ?\n\nMỗi đối tác sẽ được gắn dưới node có F1 ít nhất.`)) return;
+
+    setBusy(true);
+    let success = 0;
+    let failed  = 0;
+    for (let i = 0; i < awaitingPartners.length; i++) {
+      const p = awaitingPartners[i];
+      setProgress({ done: i, total: awaitingPartners.length });
+      try {
+        const res = await autoPlaceOne(p, DEFAULT_MAX_F1);
+        if (res.ok) {
+          success++;
+          // Notify (best-effort, không chặn flow)
+          if (p.userId) {
+            try {
+              await notify({
+                recipientType:   "user",
+                recipientUserId: p.userId,
+                type:            "join_team_approved",
+                title:           "Bạn đã được gắn vào hệ thống",
+                message:         `Cấp trên của bạn: ${res.parent.name}.`,
+                link:            "/my-tree",
+                partnerId:       p.id,
+                partnerName:     p.name,
+              });
+            } catch { /* ignore */ }
+          }
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
+      }
+    }
+    setProgress(null);
+
+    // 1 systemLog gộp cho cả batch
+    try {
+      const slRes = await api.get("/systemLogs");
+      const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
+        .map((x) => Number(x.id)).filter((n) => !isNaN(n));
+      await api.post("/systemLogs", {
+        id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
+        type:       "auto_place_bulk",
+        actorId:    String(currentUser?.id || ""),
+        actorName:  currentUser?.name || "admin",
+        targetId:   "",
+        targetType: "partners_batch",
+        description: `Auto-place batch: ${success}/${awaitingPartners.length} thành công, ${failed} thất bại.`,
+        createdAt:  new Date().toLocaleDateString("vi-VN"),
+      });
+    } catch { /* ignore */ }
+
+    setBusy(false);
+    alert(`Hoàn tất: ${success} thành công, ${failed} thất bại.`);
+    await onChange();
+  };
+
+  return (
+    <button
+      onClick={run}
+      disabled={busy}
+      style={{
+        padding: "6px 14px", borderRadius: 999, marginLeft: 8,
+        fontSize: 13, fontWeight: 600,
+        border: "1px solid #0d9488", background: "#0d9488", color: "#fff",
+        cursor: busy ? "wait" : "pointer",
+      }}
+    >
+      {busy && progress
+        ? `Đang xếp ${progress.done}/${progress.total}...`
+        : `⚡ Tự động xếp tất cả (${awaitingPartners.length})`}
+    </button>
   );
 }
 
