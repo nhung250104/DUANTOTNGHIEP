@@ -186,8 +186,11 @@ function Partnerdetailpage() {
         status:       "approved",
         contractFile: file.name,
         joinDate:     new Date().toLocaleDateString("vi-VN"),
-        level:        1,
-        levelLabel:   "Cấp 1",
+        // tier = hạng nâng cấp (1/2/3); level = độ sâu trong cây (root=0)
+        tier:         1,
+        tierLabel:    "Hạng 1",
+        level:        0,
+        levelLabel:   "Cấp 0",
         parentId:     null,
       };
       await partnerService.update(id, updated);
@@ -312,7 +315,8 @@ function Partnerdetailpage() {
                 <SectionTitle>Thông tin công việc</SectionTitle>
                 <div className="pd-grid">
                   <Field label="Mã đối tác"            value={p.code}              />
-                  <Field label="Cấp bậc"               value={p.levelLabel || "—"} teal />
+                  <Field label="Cấp (cây)"             value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
+                  <Field label="Hạng"                  value={p.tierLabel || (p.tier ? `Hạng ${p.tier}` : "—")} teal />
                   <Field label="Quản lý bởi"           value={p.managedBy}         />
                   <Field label="Ngân hàng"             value={p.bank}              />
                   <Field label="Số tài khoản"          value={p.bankAccount}       />

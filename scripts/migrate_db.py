@@ -85,7 +85,39 @@ def main():
         })
         d["promotionHistory"] = promotions
 
-    # 6. Đảm bảo $schema vẫn nằm cuối (cho tidy)
+    # 6. Tách "tier" (cấp nâng cấp cũ 1/2/3) khỏi "level" (độ sâu trong cây 0/1/2/3/.).
+    #    - tier      = level cũ (giữ nguyên cho commission + upgrade flow)
+    #    - level     = tree depth (root = 0, mỗi bước xuống +1; > 3 hiển thị ".")
+    #    - levelLabel = "Cấp 0/1/2/3" hoặc "Cấp ." cho > 3
+    partners = d.get("partners", [])
+    by_id    = {str(p.get("id")): p for p in partners}
+
+    def compute_depth(pid, seen=None):
+        seen = seen or set()
+        if pid in seen:           # cycle guard
+            return 0
+        seen.add(pid)
+        p = by_id.get(str(pid))
+        if not p: return 0
+        parent = p.get("parentId")
+        if not parent:            # root
+            return 0
+        return compute_depth(str(parent), seen) + 1
+
+    for p in partners:
+        # Backup tier nếu chưa có
+        if p.get("tier") is None:
+            old_level = p.get("level")
+            if isinstance(old_level, int) and 1 <= old_level <= 3:
+                p["tier"]      = old_level
+                p["tierLabel"] = f"Hạng {old_level}"
+
+        # Re-compute level = tree depth
+        depth = compute_depth(str(p.get("id")))
+        p["level"]      = depth
+        p["levelLabel"] = f"Cấp {depth}" if depth <= 3 else "Cấp ."
+
+    # 7. Đảm bảo $schema vẫn nằm cuối (cho tidy)
     schema = d.pop("$schema", None)
     if schema is not None:
         d["$schema"] = schema

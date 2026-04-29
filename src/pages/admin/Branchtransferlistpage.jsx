@@ -211,13 +211,35 @@ function Branchtransferlistpage() {
 
       const oldParentId = partner.parentId;
 
-      // 2. PUT partner: đổi parentId + đánh dấu transferStatus="transferred" để Orgchart hiển thị xám
+      // 2. PUT partner: đổi parentId + recompute level (tree depth) + transferStatus
+      const newLevel      = (Number(newParent.level) || 0) + 1;
+      const newLevelLabel = newLevel <= 3 ? `Cấp ${newLevel}` : "Cấp .";
       await api.put(`/partners/${partner.id}`, {
         ...partner,
         parentId:       newParentId,
         memberType:     "NORMAL",
+        level:          newLevel,
+        levelLabel:     newLevelLabel,
         transferStatus: "transferred",
       });
+
+      // 2b. Recompute level cho mọi descendant của partner (cây đã đổi shape)
+      try {
+        // BFS: queue [{id, depth}], depth = newLevel + 1 cho con trực tiếp
+        const queue = all
+          .filter((p) => String(p.parentId) === String(partner.id))
+          .map((p) => ({ p, depth: newLevel + 1 }));
+        const visited = new Set([String(partner.id)]);
+        while (queue.length > 0) {
+          const { p, depth } = queue.shift();
+          if (visited.has(String(p.id))) continue;
+          visited.add(String(p.id));
+          const lbl = depth <= 3 ? `Cấp ${depth}` : "Cấp .";
+          await api.put(`/partners/${p.id}`, { ...p, level: depth, levelLabel: lbl });
+          all.filter((c) => String(c.parentId) === String(p.id))
+             .forEach((c) => queue.push({ p: c, depth: depth + 1 }));
+        }
+      } catch (e) { console.warn("Recompute level descendants failed:", e); }
 
       // 3. Update branchTransferRequest
       const updated = { ...approveTarget, status: "approved", processedAt: getNow() };

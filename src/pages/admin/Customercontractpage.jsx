@@ -30,8 +30,9 @@ const DEFAULT_RATES = {
   2: { l1: 25, l2: 12, l3: 5 },
   3: { l1: 30, l2: 15, l3: 7 },
 };
+// Hoa hồng phụ thuộc vào "tier" (hạng nâng cấp 1/2/3), KHÔNG phải level (độ sâu trong cây).
 const ratesOf = (partner) =>
-  partner?.commissionRates || DEFAULT_RATES[partner?.level] || DEFAULT_RATES[1];
+  partner?.commissionRates || DEFAULT_RATES[partner?.tier] || DEFAULT_RATES[1];
 
 const nextId = async (collection) => {
   try {

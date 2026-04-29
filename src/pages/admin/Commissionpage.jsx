@@ -12,10 +12,10 @@ const DEFAULT_RATES = {
   2: { l1: 25, l2: 12, l3: 5 },
   3: { l1: 30, l2: 15, l3: 7 },
 };
-// Ưu tiên rate đã override trên partner (do admin duyệt yêu cầu chỉnh sửa HH).
+// Hoa hồng theo "tier" (hạng nâng cấp 1/2/3); ưu tiên rate đã override trên partner.
 const getCommRate = (partner) => {
   if (partner?.commissionRates) return partner.commissionRates;
-  return DEFAULT_RATES[partner?.level] || DEFAULT_RATES[1];
+  return DEFAULT_RATES[partner?.tier] || DEFAULT_RATES[1];
 };
 
 function MiniPager({ total, page, onPage }) {

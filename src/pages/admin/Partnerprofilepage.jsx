@@ -233,12 +233,25 @@ function Partnerprofilepage() {
     try {
       const approvedDate = new Date().toLocaleDateString("vi-VN");
 
-      // 1. Cập nhật partner → approved + level 1 + refLink (cấp 1 cũng có link giới thiệu)
+      // 1. Cập nhật partner → approved
+      //    - tier = 1 (hạng nâng cấp khởi đầu) + tierLabel "Hạng 1"
+      //    - level = 0 (root) hoặc parent.level + 1 nếu có cấp trên — tính dynamic
+      //    - refLink: cấp nào cũng có link giới thiệu
+      const allRes  = await partnerService.getAll();
+      const allList = Array.isArray(allRes.data) ? allRes.data : [];
+      const parent  = partner.parentId
+        ? allList.find((p) => String(p.id) === String(partner.parentId))
+        : null;
+      const newDepth = parent ? (Number(parent.level) || 0) + 1 : 0;
+      const newDepthLabel = newDepth <= 3 ? `Cấp ${newDepth}` : "Cấp .";
+
       await partnerService.update(partner.id, {
         ...partner,
         status:     "approved",
-        level:      1,
-        levelLabel: "Cấp 1",
+        tier:       1,
+        tierLabel:  "Hạng 1",
+        level:      newDepth,
+        levelLabel: newDepthLabel,
         joinDate:   approvedDate,
         refLink:    partner.refLink || `sivip.vn/ref/${partner.code}`,
       });
@@ -319,7 +332,9 @@ function Partnerprofilepage() {
           p.id === partner.id
             ? {
                 ...p,
-                status: "approved", level: 1, levelLabel: "Cấp 1",
+                status: "approved",
+                tier: 1, tierLabel: "Hạng 1",
+                level: newDepth, levelLabel: newDepthLabel,
                 joinDate: approvedDate,
                 refLink: p.refLink || `sivip.vn/ref/${p.code}`,
               }
@@ -395,19 +410,20 @@ function Partnerprofilepage() {
   ───────────────────────────────────────────────────────── */
   const handleApproveUpgrade = async (req, file) => {
     try {
-      const nextLevel  = (req.currentLevel || 1) + 1;
+      // currentLevel trong upgradeRequest = tier hiện tại (legacy field name)
+      const oldTier    = req.currentTier ?? req.currentLevel ?? 1;
+      const newTier    = oldTier + 1;
       const partnerRes = await partnerService.getById(req.partnerId);
       const partner    = Array.isArray(partnerRes.data) ? partnerRes.data[0] : partnerRes.data;
 
+      // Nâng cấp = đổi TIER, KHÔNG đổi tree-depth (level vẫn giữ nguyên).
       await partnerService.update(req.partnerId, {
         ...partner,
-        level:        nextLevel,
-        levelLabel:   `Cấp ${nextLevel}`,
+        tier:         newTier,
+        tierLabel:    `Hạng ${newTier}`,
         contractFile: file.name,
-        // Cấp 2 trở lên mới có link giới thiệu
-        refLink: nextLevel >= 2
-          ? `sivip.vn/ref/${partner.code}`
-          : partner.refLink,
+        // Mọi tier đều có link giới thiệu (đã backfill)
+        refLink: partner.refLink || `sivip.vn/ref/${partner.code}`,
       });
 
       await api.patch(`/upgradeRequests/${req.id}`, {
@@ -423,8 +439,10 @@ function Partnerprofilepage() {
           id:         String(phId + 1),
           partnerId:  String(req.partnerId),
           partnerName: req.partnerName,
-          oldLevel:   req.currentLevel || 1,
-          newLevel:   nextLevel,
+          oldLevel:   oldTier,            // backward-compat (đã dùng trên Mypromotionpage)
+          newLevel:   newTier,
+          oldTier:    oldTier,
+          newTier:    newTier,
           approvedBy: currentUser?.name || "admin",
           reason:     req.reason || "",
           createdAt:  new Date().toLocaleDateString("vi-VN"),
@@ -437,7 +455,7 @@ function Partnerprofilepage() {
           actorName:  currentUser?.name || "admin",
           targetId:   String(req.partnerId),
           targetType: "partner",
-          description: `Nâng cấp ${req.partnerName} từ Cấp ${req.currentLevel || 1} lên Cấp ${nextLevel}`,
+          description: `Nâng hạng ${req.partnerName} từ Hạng ${oldTier} lên Hạng ${newTier}`,
           createdAt:  new Date().toLocaleDateString("vi-VN"),
         });
       } catch (e) {
@@ -450,7 +468,7 @@ function Partnerprofilepage() {
           recipientType:   "user",
           recipientUserId: partner.userId,
           type:            "upgrade_approved",
-          title:           `Bạn đã được nâng lên Cấp ${nextLevel}`,
+          title:           `Bạn đã được nâng lên Hạng ${newTier}`,
           message:         `Yêu cầu nâng cấp của bạn đã được duyệt. Tỉ lệ hoa hồng và quyền lợi mới sẽ áp dụng từ hôm nay.`,
           link:            "/my-promotion",
           partnerId:       req.partnerId,
@@ -466,7 +484,7 @@ function Partnerprofilepage() {
       setPartners((prev) =>
         prev.map((p) =>
           p.id === req.partnerId
-            ? { ...p, level: nextLevel, levelLabel: `Cấp ${nextLevel}` }
+            ? { ...p, tier: newTier, tierLabel: `Hạng ${newTier}` }
             : p
         )
       );

@@ -73,7 +73,7 @@ function Partnercontractdetailpage() {
         if (source === "partner") {
           const res     = await api.get(`/partners/${id}`);
           const partner = res.data;
-          const comm    = getCommissionByLevel(partner.level || 1);
+          const comm    = getCommissionByLevel(partner.tier || 1);
 
           setRawPartner(partner);
           setContract({
