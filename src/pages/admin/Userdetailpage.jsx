@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import userService from "../../store/userService";
+import BackButton from "../../components/BackButton";
 import "./Userdetailpage.css";
 
 const ROLES = ["Admin", "Đối tác"];
@@ -93,7 +94,7 @@ function Userdetailpage() {
   if (error || !user) return (
     <div className="us-error">
       ⚠️ {error || "Không tìm thấy người dùng."}
-      <button onClick={() => navigate("/admin/users")}>← Quay lại</button>
+      <BackButton to="/admin/users" />
     </div>
   );
 
@@ -105,9 +106,7 @@ function Userdetailpage() {
     <div>
       <div className="page-header">
         <div className="page-header-left">
-          <button className="ud-btn-back" onClick={() => navigate("/admin/users")}>
-            ← Quay lại
-          </button>
+          <BackButton to="/admin/users" />
           <h1 style={{ marginTop: 8 }}>Thông tin tài khoản</h1>
           <p>{user.name}</p>
         </div>

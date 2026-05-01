@@ -138,8 +138,7 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
               <th>Họ và tên</th>
               <th>Số điện thoại</th>
               <th>Địa chỉ</th>
-              <th>Cấp (cây)</th>
-              <th>Hạng</th>
+              <th>Cấp</th>
               <th>Diện</th>
               {extraColumns.map((c) => <th key={c.key}>{c.label}</th>)}
             </tr>
@@ -147,7 +146,7 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
           <tbody>
             {pageData.length === 0 ? (
               <tr>
-                <td colSpan={8 + extraColumns.length} className="pp-empty">
+                <td colSpan={7 + extraColumns.length} className="pp-empty">
                   Không có dữ liệu
                 </td>
               </tr>
@@ -167,16 +166,6 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
                     }}>
                       {row.levelLabel || (row.level != null ? `Cấp ${row.level}` : "—")}
                     </span>
-                  </td>
-                  <td>
-                    {row.tier ? (
-                      <span style={{
-                        display: "inline-block", padding: "2px 8px", borderRadius: 6,
-                        background: "#fef3c7", color: "#92400e", fontSize: 11, fontWeight: 600,
-                      }}>
-                        {row.tierLabel || `Hạng ${row.tier}`}
-                      </span>
-                    ) : <span style={{ color: "#cbd5e1" }}>—</span>}
                   </td>
                   <td>
                     <span style={{
@@ -227,6 +216,8 @@ function Partnerprofilepage() {
   const [tab, setTab] = useState("approved");
   // Filter "diện" cho tab approved: all | independent | awaiting | in_tree
   const [classFilter, setClassFilter] = useState("all");
+  // Filter cấp (tree depth): "" = tất cả, "0" | "1" | "2" | "3plus"
+  const [levelFilter, setLevelFilter] = useState("");
   const [search,      setSearch]      = useState("");
 
   const [partners,        setPartners       ] = useState([]);
@@ -576,7 +567,14 @@ function Partnerprofilepage() {
   const sortByNewest = (arr) =>
     [...arr].sort((a, b) => Number(b.id) - Number(a.id));
 
-  const approvedAll     = sortByNewest(partners.filter((p) => p.status === "approved" && matchSearch(p)));
+  const matchLevel = (p) => {
+    if (!levelFilter) return true;
+    const lv = Number(p.level) || 0;
+    if (levelFilter === "3plus") return lv >= 3;
+    return String(lv) === levelFilter;
+  };
+
+  const approvedAll     = sortByNewest(partners.filter((p) => p.status === "approved" && matchSearch(p) && matchLevel(p)));
   const approved        = classFilter === "all"
     ? approvedAll
     : approvedAll.filter((p) => classifyPartner(p).key === classFilter);
@@ -712,6 +710,39 @@ function Partnerprofilepage() {
                     onChange={fetchAll}
                   />
                 )}
+              </div>
+
+              {/* Filter pills theo "Cấp" (tree depth) */}
+              <div style={{
+                display: "flex", gap: 8, padding: "0 0 12px",
+                flexWrap: "wrap", alignItems: "center",
+                fontSize: 12, color: "#64748b",
+              }}>
+                <span style={{ marginRight: 6 }}>Lọc theo cấp:</span>
+                {[
+                  { key: "",      label: "Tất cả" },
+                  { key: "0",     label: "Cấp 0" },
+                  { key: "1",     label: "Cấp 1" },
+                  { key: "2",     label: "Cấp 2" },
+                  { key: "3plus", label: "Cấp 3+" },
+                ].map((f) => {
+                  const active = levelFilter === f.key;
+                  return (
+                    <button
+                      key={f.key || "all"}
+                      onClick={() => setLevelFilter(f.key)}
+                      style={{
+                        padding: "4px 10px", borderRadius: 6,
+                        fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        border: `1px solid ${active ? "#0d9488" : "#e2e8f0"}`,
+                        background: active ? "#0d9488" : "#fff",
+                        color: active ? "#fff" : "#0d9488",
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
               </div>
 
               <PartnerTable

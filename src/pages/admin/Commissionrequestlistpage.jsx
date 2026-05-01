@@ -52,25 +52,42 @@ const getNow = () => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
-/* ─── Approve modal: nhập adjustmentAmount ─────────────────── */
+/* ─── Approve modal: chọn loại điều chỉnh + nhập số tiền ────── */
 function ApproveModal({ target, onClose, onConfirm, loading }) {
+  // Loại điều chỉnh:
+  //   "contract" → sửa theo HĐ cụ thể (relatedContractCode + amount = hoa hồng đúng)
+  //   "bonus"    → thưởng/phạt độc lập (không gắn HĐ, chỉ cộng/trừ vào tích luỹ)
+  const [adjType,   setAdjType  ] = useState(target.relatedContractCode ? "contract" : "bonus");
+  const [contractCode, setContractCode] = useState(target.relatedContractCode || "");
   const [adjustment, setAdjustment] = useState("");
   const [adminNote,  setAdminNote ] = useState("");
   const [err,        setErr       ] = useState("");
 
   const submit = () => {
-    const num = Number(String(adjustment).replace(/\D/g, "")) * (String(adjustment).trim().startsWith("-") ? -1 : 1);
-    if (!adjustment || isNaN(num) || num === 0) {
+    const numStr = String(adjustment).trim();
+    const isNeg = numStr.startsWith("-");
+    const digits = numStr.replace(/[^\d]/g, "");
+    const num = (isNeg ? -1 : 1) * Number(digits || "0");
+    if (!digits || num === 0) {
       setErr("Vui lòng nhập số tiền điều chỉnh khác 0 (dương = bù thêm, âm = trừ).");
       return;
     }
+    if (adjType === "contract" && !contractCode.trim()) {
+      setErr("Loại 'theo hợp đồng' yêu cầu nhập mã HĐ.");
+      return;
+    }
     setErr("");
-    onConfirm({ adjustmentAmount: num, adminNote: adminNote.trim() });
+    onConfirm({
+      adjustmentAmount:    num,
+      adjustmentType:      adjType,
+      relatedContractCode: adjType === "contract" ? contractCode.trim() : null,
+      adminNote:           adminNote.trim(),
+    });
   };
 
   return (
     <div className="cc-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="cc-modal" style={{ maxWidth: 560 }}>
+      <div className="cc-modal" style={{ maxWidth: 600 }}>
         <div className="cc-modal-header cc-modal-header--approve">
           <span className="cc-modal-icon">✓</span>
           <div>
@@ -90,24 +107,84 @@ function ApproveModal({ target, onClose, onConfirm, loading }) {
           </div>
 
           <label className="cc-modal-label" style={{ marginTop: 14 }}>
+            Loại điều chỉnh <span className="cc-req">*</span>
+          </label>
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            <label style={{
+              flex: 1, padding: "10px 12px", borderRadius: 8, cursor: "pointer",
+              border: `2px solid ${adjType === "contract" ? "#0d9488" : "#e2e8f0"}`,
+              background: adjType === "contract" ? "#f0fdfa" : "#fff",
+              fontSize: 13,
+            }}>
+              <input
+                type="radio" name="adjType" value="contract"
+                checked={adjType === "contract"}
+                onChange={(e) => setAdjType(e.target.value)}
+                style={{ marginRight: 6 }}
+              />
+              <strong>Theo hợp đồng</strong>
+              <p style={{ fontSize: 11, color: "#64748b", margin: "4px 0 0 22px" }}>
+                Bù số tiền HH của 1 HĐ cụ thể (vd: hoa hồng tính sai)
+              </p>
+            </label>
+            <label style={{
+              flex: 1, padding: "10px 12px", borderRadius: 8, cursor: "pointer",
+              border: `2px solid ${adjType === "bonus" ? "#0d9488" : "#e2e8f0"}`,
+              background: adjType === "bonus" ? "#f0fdfa" : "#fff",
+              fontSize: 13,
+            }}>
+              <input
+                type="radio" name="adjType" value="bonus"
+                checked={adjType === "bonus"}
+                onChange={(e) => setAdjType(e.target.value)}
+                style={{ marginRight: 6 }}
+              />
+              <strong>Thưởng / Phạt (bonus)</strong>
+              <p style={{ fontSize: 11, color: "#64748b", margin: "4px 0 0 22px" }}>
+                Cộng/trừ thẳng vào HH tích luỹ, không gắn HĐ cụ thể.
+              </p>
+            </label>
+          </div>
+
+          {adjType === "contract" && (
+            <>
+              <label className="cc-modal-label" style={{ marginTop: 14 }}>
+                Mã HĐ cần sửa <span className="cc-req">*</span>
+              </label>
+              <input
+                className="cc-modal-select"
+                placeholder="VD: HDKH000001"
+                value={contractCode}
+                onChange={(e) => setContractCode(e.target.value)}
+              />
+            </>
+          )}
+
+          <label className="cc-modal-label" style={{ marginTop: 14 }}>
             Số tiền điều chỉnh (VNĐ) <span className="cc-req">*</span>
           </label>
           <input
             className="cc-modal-select"
-            placeholder="Dương = bù thêm cho user, âm = trừ. VD: 5000000 hoặc -200000"
+            placeholder="Dương = bù thêm, âm = trừ. VD: 5000000 hoặc -200000"
             value={adjustment}
             onChange={(e) => setAdjustment(e.target.value)}
           />
-          {adjustment && !isNaN(Number(adjustment)) && Number(adjustment) !== 0 && (
-            <p style={{ fontSize: 12, color: Number(adjustment) >= 0 ? "#15803d" : "#b91c1c", marginTop: 4 }}>
-              {Number(adjustment) >= 0 ? "+ " : ""}{fmtMoney(Number(adjustment))} đ sẽ được cộng vào hoa hồng tích luỹ của user.
-            </p>
-          )}
+          {adjustment && (() => {
+            const isNeg = adjustment.trim().startsWith("-");
+            const num = (isNeg ? -1 : 1) * Number(adjustment.replace(/[^\d]/g, "") || "0");
+            return num !== 0 ? (
+              <p style={{ fontSize: 12, color: num >= 0 ? "#15803d" : "#b91c1c", marginTop: 4 }}>
+                {num >= 0 ? "+ " : ""}{fmtMoney(num)} đ sẽ được cộng vào hoa hồng tích luỹ của user.
+              </p>
+            ) : null;
+          })()}
 
           <label className="cc-modal-label" style={{ marginTop: 14 }}>Ghi chú của admin</label>
           <textarea
             className="cc-modal-textarea"
-            placeholder="Lý do điều chỉnh, căn cứ tính toán..."
+            placeholder={adjType === "contract"
+              ? "Vd: HĐ HDKH000001 trước tính 5tr (5%), đúng phải là 10tr (10%) → bù 5tr."
+              : "Vd: Thưởng đạt KPI quý 1 / Phạt vi phạm chính sách..."}
             rows={3}
             value={adminNote}
             onChange={(e) => setAdminNote(e.target.value)}
@@ -218,15 +295,19 @@ function Commissionrequestlistpage() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleApprove = async ({ adjustmentAmount, adminNote }) => {
+  const handleApprove = async ({ adjustmentAmount, adjustmentType, relatedContractCode, adminNote }) => {
     if (!approveTarget) return;
     setModalLoading(true);
     try {
-      // 1. Cập nhật commissionHistory: thêm 1 entry kiểu "adjustment" — bất biến.
+      // 1. Tạo entry trong commissionHistory.
+      //    - contract → commissionType="ADJ_CONTRACT", contractCode = mã HĐ admin chọn
+      //    - bonus    → commissionType="ADJ_BONUS",    contractCode = "BONUS-<reqId>"
       const histRes = await api.get("/commissionHistory");
       const histList = Array.isArray(histRes.data) ? histRes.data : [];
       const histIds = histList.map((x) => Number(x.id)).filter((n) => !isNaN(n));
       const newHistId = String((histIds.length > 0 ? Math.max(...histIds) : 0) + 1);
+
+      const isContract = adjustmentType === "contract";
       await api.post("/commissionHistory", {
         id:                newHistId,
         partnerId:         String(approveTarget.partnerId),
@@ -234,12 +315,13 @@ function Commissionrequestlistpage() {
         sourcePartnerId:   String(approveTarget.partnerId),
         sourcePartnerName: approveTarget.partnerName,
         contractId:        null,
-        contractCode:      approveTarget.relatedContractCode || `ADJ-${approveTarget.id}`,
+        contractCode:      isContract ? relatedContractCode : `BONUS-${approveTarget.id}`,
         contractValue:     0,
-        commissionType:    "ADJ",         // adjustment record
+        commissionType:    isContract ? "ADJ_CONTRACT" : "ADJ_BONUS",
         rate:              0,
         commissionAmount:  adjustmentAmount,
         adjustmentRequestId: approveTarget.id,
+        adjustmentType,
         adjustmentNote:    adminNote || `Điều chỉnh theo yêu cầu #${approveTarget.id}: ${ERROR_LABEL[approveTarget.errorType] || approveTarget.errorTypeLabel || ""}`,
         createdAt:         getNow(),
       });
@@ -276,6 +358,8 @@ function Commissionrequestlistpage() {
         status:           "approved",
         processedAt:      getNow(),
         adjustmentAmount,
+        adjustmentType,
+        relatedContractCode: isContract ? relatedContractCode : approveTarget.relatedContractCode,
         adminNote,
       };
       await api.put(`/commissionRequests/${approveTarget.id}`, updated);
@@ -292,7 +376,7 @@ function Commissionrequestlistpage() {
           actorName:  "admin",
           targetId:   String(approveTarget.partnerId),
           targetType: "partner",
-          description: `Điều chỉnh ${adjustmentAmount >= 0 ? "+" : ""}${fmtMoney(adjustmentAmount)}đ cho ${approveTarget.partnerName} (req #${approveTarget.id})${adminNote ? ` — ${adminNote}` : ""}`,
+          description: `Điều chỉnh ${adjustmentAmount >= 0 ? "+" : ""}${fmtMoney(adjustmentAmount)}đ (${isContract ? `theo HĐ ${relatedContractCode}` : "bonus"}) cho ${approveTarget.partnerName} (req #${approveTarget.id})${adminNote ? ` — ${adminNote}` : ""}`,
           createdAt:  getNow(),
         });
       } catch { /* ignore */ }

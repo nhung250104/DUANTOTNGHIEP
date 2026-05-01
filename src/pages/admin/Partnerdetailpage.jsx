@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
+import useAuthStore from "../../store/authStore";
+import BackButton from "../../components/BackButton";
 import "./Partnerdetailpage.css";
 
 /* ─── Helper ─────────────────────────────────────────────── */
@@ -128,11 +130,17 @@ function ApproveModal({ name, onClose, onSubmit }) {
 }
 
 /* ─── Page ───────────────────────────────────────────────── */
-function Partnerdetailpage() {
-  const { id }         = useParams();
-  const navigate       = useNavigate();
-  const [searchParams] = useSearchParams();
-  const isRequest      = searchParams.get("request") === "true";
+/**
+ * Props:
+ *   userMode (bool): true → user xem hồ sơ của chính mình (không có URL id,
+ *                    ẩn các nút admin action, thay bằng nút "Xem hoa hồng").
+ */
+function Partnerdetailpage({ userMode = false } = {}) {
+  const { id: routeId } = useParams();
+  const navigate        = useNavigate();
+  const [searchParams]  = useSearchParams();
+  const isRequest       = searchParams.get("request") === "true" && !userMode;
+  const currentUser     = useAuthStore((s) => s.user);
 
   const [partner,  setPartner ] = useState(null);
   const [loading,  setLoading ] = useState(true);
@@ -141,20 +149,38 @@ function Partnerdetailpage() {
   const [done,     setDone    ] = useState(null);
   const [saving,   setSaving  ] = useState(false);
 
-  // Tab: "info" | "commission"
-  // Dùng tab UI nhỏ ở header thay vì navigate hẳn sang trang khác
-  // nhưng theo yêu cầu → dùng nút điều hướng sang trang riêng
   const [activeTab, setActiveTab] = useState("info");
+
+  // Trong userMode, lookup partner theo currentUser thay vì id từ URL.
+  // Set state id riêng để các handler vẫn dùng được khi cần.
+  const [resolvedId, setResolvedId] = useState(routeId);
+  const id = resolvedId;
 
   useEffect(() => {
     const fetchPartner = async () => {
       try {
         setLoading(true);
         setError("");
-        const res  = await partnerService.getById(id);
+
+        if (userMode) {
+          // User xem chính mình
+          if (!currentUser) return;
+          const all = await partnerService.getAll();
+          const list = Array.isArray(all.data) ? all.data : [];
+          const me = list.find(
+            (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
+          );
+          if (!me) { setError("Không tìm thấy hồ sơ đối tác của bạn."); return; }
+          setPartner(me);
+          setResolvedId(String(me.id));
+          return;
+        }
+
+        const res  = await partnerService.getById(routeId);
         const data = Array.isArray(res.data) ? res.data[0] : res.data;
         if (!data) { setError("Không tìm thấy hồ sơ."); return; }
         setPartner(data);
+        setResolvedId(String(data.id));
       } catch {
         setError("Không thể tải thông tin hồ sơ.");
       } finally {
@@ -162,7 +188,7 @@ function Partnerdetailpage() {
       }
     };
     fetchPartner();
-  }, [id]);
+  }, [routeId, userMode, currentUser]);
 
   const handleReject = async (reason) => {
     try {
@@ -214,7 +240,7 @@ function Partnerdetailpage() {
   if (error || !partner) return (
     <div className="pd-error">
       ⚠️ {error || "Không tìm thấy hồ sơ này."}
-      <button onClick={() => navigate("/admin/partners")}>← Quay lại</button>
+      <BackButton to="/admin/partners" />
     </div>
   );
 
@@ -225,18 +251,28 @@ function Partnerdetailpage() {
       {/* ── Page header ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <button className="pd-btn-back" onClick={() => navigate("/admin/partners")}>
-            ← Quay lại
-          </button>
-          <h1 style={{ marginTop: 8 }}>
-            {isRequest ? "Thông tin yêu cầu trở thành đối tác" : "Thông tin đối tác"}
+          {!userMode && <BackButton to="/admin/partners" />}
+          <h1 style={{ marginTop: userMode ? 0 : 8 }}>
+            {userMode
+              ? "Thông tin đối tác của tôi"
+              : (isRequest ? "Thông tin yêu cầu trở thành đối tác" : "Thông tin đối tác")}
           </h1>
           <p>{p.name}</p>
         </div>
 
         <div style={{ display: "flex", gap: 10, alignSelf: "flex-end", flexWrap: "wrap" }}>
-          {/* ── Nút Thông tin đối tác / Hoa hồng ── */}
-          {!isRequest && (
+          {/* ── userMode: chỉ nút Xem hoa hồng ── */}
+          {userMode && (
+            <button
+              className="pd-tab-btn pd-tab-btn--commission pd-tab-btn--active"
+              onClick={() => navigate("/my-commission")}
+            >
+              💰 Xem hoa hồng
+            </button>
+          )}
+
+          {/* ── Admin: Nút Thông tin đối tác / Hoa hồng ── */}
+          {!userMode && !isRequest && (
             <>
               <button
                 className={`pd-tab-btn ${activeTab === "info" ? "pd-tab-btn--active" : ""}`}
@@ -251,7 +287,6 @@ function Partnerdetailpage() {
                 className={`pd-tab-btn pd-tab-btn--commission ${activeTab === "commission" ? "pd-tab-btn--active" : ""}`}
                 onClick={() => {
                   setActiveTab("commission");
-                  // ── Điều hướng sang trang hoa hồng ──
                   navigate(`/admin/partners-profile/${id}/commission`);
                 }}
               >
@@ -260,8 +295,8 @@ function Partnerdetailpage() {
             </>
           )}
 
-          {/* Nút hành động cho yêu cầu chờ duyệt */}
-          {isRequest && !done && (
+          {/* Nút hành động cho yêu cầu chờ duyệt (admin only) */}
+          {!userMode && isRequest && !done && (
             <>
               <button
                 className="pd-btn-reject-hdr"
@@ -280,8 +315,8 @@ function Partnerdetailpage() {
             </>
           )}
 
-          {done === "approved" && <div className="pd-status pd-status--approved">✓ Đã phê duyệt</div>}
-          {done === "rejected" && <div className="pd-status pd-status--rejected">✕ Đã từ chối</div>}
+          {!userMode && done === "approved" && <div className="pd-status pd-status--approved">✓ Đã phê duyệt</div>}
+          {!userMode && done === "rejected" && <div className="pd-status pd-status--rejected">✕ Đã từ chối</div>}
         </div>
       </div>
 
@@ -315,8 +350,7 @@ function Partnerdetailpage() {
                 <SectionTitle>Thông tin công việc</SectionTitle>
                 <div className="pd-grid">
                   <Field label="Mã đối tác"            value={p.code}              />
-                  <Field label="Cấp (cây)"             value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
-                  <Field label="Hạng"                  value={p.tierLabel || (p.tier ? `Hạng ${p.tier}` : "—")} teal />
+                  <Field label="Cấp"                   value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
                   <Field label="Quản lý bởi"           value={p.managedBy}         />
                   <Field label="Ngân hàng"             value={p.bank}              />
                   <Field label="Số tài khoản"          value={p.bankAccount}       />

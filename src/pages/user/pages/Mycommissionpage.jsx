@@ -6,9 +6,9 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../../../store/api";
 import useAuthStore from "../../../store/authStore";
+import CommissionRequestModal from "../../../components/CommissionRequestModal";
 import "../../admin/Commissionpage.css";
 
 const fmt    = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
@@ -21,15 +21,22 @@ const parseDate = (str = "") => {
 };
 
 const TYPE_LABEL = {
-  L1: "Cấp 1 — HĐ tự ký",
-  L2: "Cấp 2 — F1 ký",
-  L3: "Cấp 3 — Đội nhóm",
+  L1:           "Cấp 1 — HĐ tự ký",
+  L2:           "Cấp 2 — F1 ký",
+  L3:           "Cấp 3 — Đội nhóm",
+  ADJ_CONTRACT: "Điều chỉnh — Theo HĐ",
+  ADJ_BONUS:    "Thưởng / Phạt",
+  ADJ:          "Điều chỉnh", // legacy
 };
-const TYPE_COLOR = { L1: "teal", L2: "blue", L3: "purple" };
+const TYPE_COLOR = {
+  L1: "teal", L2: "blue", L3: "purple",
+  ADJ_CONTRACT: "blue", ADJ_BONUS: "purple", ADJ: "blue",
+};
 
 function Mycommissionpage() {
-  const navigate    = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportSent,      setReportSent     ] = useState(false);
 
   const [partner,  setPartner ] = useState(null);
   const [history,  setHistory ] = useState([]);
@@ -173,7 +180,7 @@ function Mycommissionpage() {
           Gửi yêu cầu kiểm tra để admin xem xét và điều chỉnh.
         </div>
         <button
-          onClick={() => navigate("/partner-contract")}
+          onClick={() => setShowReportModal(true)}
           style={{
             padding: "8px 16px", borderRadius: 8,
             background: "#ea580c", color: "#fff",
@@ -184,6 +191,16 @@ function Mycommissionpage() {
           ⚠️ Báo lỗi hoa hồng
         </button>
       </div>
+
+      {reportSent && (
+        <div style={{
+          margin: "0 0 14px", padding: "10px 14px",
+          background: "#f0fdf4", border: "1px solid #bbf7d0",
+          borderRadius: 8, color: "#166534", fontSize: 13, fontWeight: 600,
+        }}>
+          ✅ Đã gửi yêu cầu kiểm tra hoa hồng. Admin sẽ xem xét và phản hồi sớm.
+        </div>
+      )}
 
       <div className="cp-table-section">
         <div className="cp-table-header">
@@ -230,6 +247,18 @@ function Mycommissionpage() {
           </table>
         </div>
       </div>
+
+      {showReportModal && me && (
+        <CommissionRequestModal
+          partner={me}
+          onClose={() => setShowReportModal(false)}
+          onSubmitted={() => {
+            setShowReportModal(false);
+            setReportSent(true);
+            setTimeout(() => setReportSent(false), 5000);
+          }}
+        />
+      )}
     </div>
   );
 }

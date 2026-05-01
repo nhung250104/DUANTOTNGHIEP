@@ -40,7 +40,8 @@ const ADMIN_MENU = [
 const MEMBER_MENU_BASE = [
   { path: "/dashboard",           icon: LayoutDashboard, label: "Trang chủ"            },
   { path: "/my-profile",          icon: User,            label: "Thông tin cá nhân"    },
-  { path: "/partner-contract",    icon: FolderOpen,      label: "Hồ sơ đối tác"        },
+  { path: "/my-partner-info",     icon: FolderOpen,      label: "Thông tin đối tác"    },
+  { path: "/partner-contract",    icon: FileCheck,       label: "Hồ sơ HĐ đối tác"     },
   { path: "/khach-hang",          icon: UserPlus,        label: "Khách hàng"           },
   { path: "/my-tree",             icon: GitBranch,       label: "Sơ đồ cây"            },
   { path: "/upgrade-requests",    icon: History,         label: "Nâng cấp đối tác"     },
