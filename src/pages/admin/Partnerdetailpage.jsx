@@ -315,8 +315,7 @@ function Partnerdetailpage() {
                 <SectionTitle>Thông tin công việc</SectionTitle>
                 <div className="pd-grid">
                   <Field label="Mã đối tác"            value={p.code}              />
-                  <Field label="Cấp (cây)"             value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
-                  <Field label="Hạng"                  value={p.tierLabel || (p.tier ? `Hạng ${p.tier}` : "—")} teal />
+                  <Field label="Cấp"                   value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
                   <Field label="Quản lý bởi"           value={p.managedBy}         />
                   <Field label="Ngân hàng"             value={p.bank}              />
                   <Field label="Số tài khoản"          value={p.bankAccount}       />
