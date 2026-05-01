@@ -261,14 +261,22 @@ function Partnerdetailpage({ userMode = false } = {}) {
         </div>
 
         <div style={{ display: "flex", gap: 10, alignSelf: "flex-end", flexWrap: "wrap" }}>
-          {/* ── userMode: chỉ nút Xem hoa hồng ── */}
+          {/* ── userMode: nút Xem hoa hồng + Hồ sơ HĐ đối tác ── */}
           {userMode && (
-            <button
-              className="pd-tab-btn pd-tab-btn--commission pd-tab-btn--active"
-              onClick={() => navigate("/my-commission")}
-            >
-              💰 Xem hoa hồng
-            </button>
+            <>
+              <button
+                className="pd-tab-btn pd-tab-btn--commission pd-tab-btn--active"
+                onClick={() => navigate("/my-commission")}
+              >
+                💰 Xem hoa hồng
+              </button>
+              <button
+                className="pd-tab-btn"
+                onClick={() => navigate("/partner-contract")}
+              >
+                📄 Hồ sơ HĐ đối tác
+              </button>
+            </>
           )}
 
           {/* ── Admin: Nút Thông tin đối tác / Hoa hồng ── */}

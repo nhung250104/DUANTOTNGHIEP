@@ -171,8 +171,8 @@
       "status": "approved",
       "joinDate": "01/01/2025",
       "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 10,
       "commission": 125000000,
       "refLink": "sivip.vn/ref/000001",
@@ -189,9 +189,7 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL",
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "memberType": "NORMAL"
     },
     {
       "id": "2",
@@ -204,8 +202,8 @@
       "status": "approved",
       "joinDate": "15/02/2025",
       "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 8,
       "commission": 90000000,
       "refLink": "sivip.vn/ref/000002",
@@ -222,9 +220,7 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL",
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "memberType": "NORMAL"
     },
     {
       "id": "3",
@@ -237,8 +233,8 @@
       "status": "approved",
       "joinDate": "20/03/2025",
       "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 5,
       "commission": 60000000,
       "refLink": "sivip.vn/ref/000003",
@@ -255,9 +251,7 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL",
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "memberType": "NORMAL"
     },
     {
       "id": "4",
@@ -270,8 +264,8 @@
       "status": "approved",
       "joinDate": "10/04/2025",
       "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0",
+      "level": 1,
+      "levelLabel": "Cấp 1",
       "contracts": 4,
       "commission": 37550000,
       "refLink": "sivip.vn/ref/000004",
@@ -288,9 +282,7 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "PARTNER",
-      "tier": 3,
-      "tierLabel": "Hạng 3"
+      "memberType": "PARTNER"
     },
     {
       "id": "5",
@@ -303,8 +295,8 @@
       "status": "approved",
       "joinDate": "05/05/2025",
       "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 4,
       "commission": 48000000,
       "refLink": "sivip.vn/ref/000005",
@@ -321,9 +313,7 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL",
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "memberType": "NORMAL"
     },
     {
       "id": "6",
@@ -336,8 +326,8 @@
       "status": "approved",
       "joinDate": "20/05/2025",
       "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 2,
       "commission": 22000000,
       "refLink": "sivip.vn/ref/000006",
@@ -354,9 +344,7 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL",
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "memberType": "NORMAL"
     },
     {
       "id": "7",
@@ -379,8 +367,8 @@
       "userId": "8",
       "parentId": "4",
       "referralCode": null,
-      "level": 1,
-      "levelLabel": "Cấp 1",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 0,
       "commission": 0,
       "refLink": "sivip.vn/ref/000007",
@@ -389,9 +377,7 @@
       "bankAccount": null,
       "managedBy": null,
       "transferStatus": null,
-      "memberType": "NORMAL",
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "memberType": "NORMAL"
     },
     {
       "id": "8",
@@ -414,8 +400,8 @@
       "userId": "9",
       "parentId": "4",
       "referralCode": "000004",
-      "level": 1,
-      "levelLabel": "Cấp 1",
+      "level": 2,
+      "levelLabel": "Cấp 2",
       "contracts": 1,
       "commission": 1750000,
       "refLink": "sivip.vn/ref/000008",
@@ -424,9 +410,7 @@
       "bankAccount": null,
       "managedBy": null,
       "transferStatus": null,
-      "memberType": "PARTNER",
-      "tier": 2,
-      "tierLabel": "Hạng 2"
+      "memberType": "PARTNER"
     },
     {
       "id": "9",
@@ -449,8 +433,8 @@
       "userId": "10",
       "parentId": "8",
       "referralCode": "000008",
-      "level": 2,
-      "levelLabel": "Cấp 2",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 0,
       "commission": 0,
       "refLink": "sivip.vn/ref/000009",
@@ -459,9 +443,7 @@
       "bankAccount": null,
       "managedBy": null,
       "transferStatus": null,
-      "memberType": "NORMAL",
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "memberType": "NORMAL"
     },
     {
       "id": "10",
@@ -485,8 +467,8 @@
       "parentId": null,
       "referralCode": null,
       "memberType": "INDEPENDENT",
-      "level": 0,
-      "levelLabel": "Cấp 0",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 0,
       "commission": 0,
       "refLink": "sivip.vn/ref/000010",
@@ -494,9 +476,7 @@
       "bank": null,
       "bankAccount": null,
       "managedBy": null,
-      "transferStatus": null,
-      "tier": 1,
-      "tierLabel": "Hạng 1"
+      "transferStatus": null
     }
   ],
   "upgradeRequests": [

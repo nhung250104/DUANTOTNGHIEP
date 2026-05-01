@@ -41,13 +41,11 @@ const MEMBER_MENU_BASE = [
   { path: "/dashboard",           icon: LayoutDashboard, label: "Trang chủ"            },
   { path: "/my-profile",          icon: User,            label: "Thông tin cá nhân"    },
   { path: "/my-partner-info",     icon: FolderOpen,      label: "Thông tin đối tác"    },
-  { path: "/partner-contract",    icon: FileCheck,       label: "Hồ sơ HĐ đối tác"     },
   { path: "/khach-hang",          icon: UserPlus,        label: "Khách hàng"           },
   { path: "/my-tree",             icon: GitBranch,       label: "Sơ đồ cây"            },
   { path: "/upgrade-requests",    icon: History,         label: "Nâng cấp đối tác"     },
   { path: "/hop-dong-doi-tac",    icon: FileCheck,       label: "Hợp đồng đối tác"     },
   { path: "/hop-dong-khach-hang", icon: FileText,        label: "Hợp đồng khách hàng"  },
-  { path: "/my-promotion",        icon: ScrollText,      label: "Lịch sử nâng cấp"     },
   { path: "/my-stats",            icon: BarChart3,       label: "Thống kê"             },
 ];
 

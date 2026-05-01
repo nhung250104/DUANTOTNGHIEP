@@ -249,11 +249,11 @@ function Orgchartpage({ userMode = false } = {}) {
     return acc;
   }, {});
 
-  /* ── User mode: hiển thị parent → me → my descendants ────────────────
-     - Nếu user có parent: root = clone parent có DUY NHẤT con là me
-       (không lộ siblings của me). me có đầy đủ subtree của mình.
-     - Nếu user là root (parentId=null): hiển thị me như root bình thường.
-  ────────────────────────────────────────────────────────────────────── */
+  /* ── User mode: chỉ hiển thị parent (cấp trên trực tiếp) + me ───────────
+     KHÔNG hiển thị: siblings, grandparent, descendants của me,
+                     hoặc nhánh khác của hệ thống.
+     Yêu cầu rõ ràng từ user: tree chỉ thấy bản thân + cấp trên trực tiếp.
+  ──────────────────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (!userMode || !currentUser || allPartners.length === 0) return;
     const me = allPartners.find(
@@ -262,23 +262,25 @@ function Orgchartpage({ userMode = false } = {}) {
     if (!me) return;
 
     setSearchText(me.name);
-    const map  = buildMap(allPartners);
-    const meNode = map[me.id];
-    if (!meNode) return;
+
+    // Tạo node me KHÔNG có children (strip mọi descendants)
+    const meNodeStripped = { ...me, children: [] };
 
     let root;
-    if (me.parentId && map[me.parentId]) {
-      // Wrap: parent giả với DUY NHẤT 1 child = me (giữ nguyên subtree me)
-      const parentClone = { ...map[me.parentId], children: [meNode] };
-      root = parentClone;
+    if (me.parentId) {
+      const parent = allPartners.find((p) => String(p.id) === String(me.parentId));
+      if (parent) {
+        // Parent CHỈ có 1 child = me, không có siblings/descendants khác
+        root = { ...parent, children: [meNodeStripped] };
+      } else {
+        root = meNodeStripped;
+      }
     } else {
-      root = meNode;
+      root = meNodeStripped;
     }
     assignRelLevel(root, 1);
 
-    const initialExpanded = new Set([root.id, meNode.id]);
-    (meNode.children || []).forEach((c) => initialExpanded.add(c.id));
-    setExpandedIds(initialExpanded);
+    setExpandedIds(new Set([root.id, meNodeStripped.id]));
     setRootNode(root);
   }, [userMode, currentUser, allPartners]);
 

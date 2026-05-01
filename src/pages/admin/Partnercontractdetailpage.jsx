@@ -11,13 +11,15 @@ const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
 const getInitials = (name = "") =>
   name.trim().split(" ").filter(Boolean).slice(-2).map((w) => w[0].toUpperCase()).join("");
 
-const getCommissionByLevel = (level = 1) => {
+// Cấp 0 = cao nhất, Cấp 3 = mới đăng ký
+const getCommissionByLevel = (level = 3) => {
   const table = {
-    1: { l1: 20, l2: 10, l3: 3 },
-    2: { l1: 25, l2: 12, l3: 5 },
-    3: { l1: 30, l2: 15, l3: 7 },
+    0: { l1: 35, l2: 18, l3: 10 },
+    1: { l1: 30, l2: 15, l3: 7  },
+    2: { l1: 25, l2: 12, l3: 5  },
+    3: { l1: 20, l2: 10, l3: 3  },
   };
-  return table[level] || table[1];
+  return table[level] || table[3];
 };
 
 /* ─── Components ─────────────────────────────────────────── */
@@ -74,7 +76,7 @@ function Partnercontractdetailpage() {
         if (source === "partner") {
           const res     = await api.get(`/partners/${id}`);
           const partner = res.data;
-          const comm    = getCommissionByLevel(partner.tier || 1);
+          const comm    = getCommissionByLevel(partner.level ?? 3);
 
           setRawPartner(partner);
           setContract({
@@ -104,7 +106,10 @@ function Partnercontractdetailpage() {
           const upgrade   = upRes.data;
           const pRes2     = await api.get(`/partners/${upgrade.partnerId}`);
           const partner   = pRes2.data;
-          const nextLevel = (upgrade.currentLevel || 1) + 1;
+          // Upgrade direction: cấp giảm dần (3 → 2 → 1 → 0). currentLevel field
+          // trong upgradeRequest = level ngay TRƯỚC khi nâng (legacy có thể là tier).
+          const oldLvl    = upgrade.currentLevel ?? upgrade.currentTier ?? 3;
+          const nextLevel = Math.max(0, oldLvl - 1);
           const comm      = getCommissionByLevel(nextLevel);
 
           setRawPartner(partner);
