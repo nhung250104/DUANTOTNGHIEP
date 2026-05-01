@@ -21,11 +21,17 @@ const parseDate = (str = "") => {
 };
 
 const TYPE_LABEL = {
-  L1: "Cấp 1 — HĐ tự ký",
-  L2: "Cấp 2 — F1 ký",
-  L3: "Cấp 3 — Đội nhóm",
+  L1:           "Cấp 1 — HĐ tự ký",
+  L2:           "Cấp 2 — F1 ký",
+  L3:           "Cấp 3 — Đội nhóm",
+  ADJ_CONTRACT: "Điều chỉnh — Theo HĐ",
+  ADJ_BONUS:    "Thưởng / Phạt",
+  ADJ:          "Điều chỉnh", // legacy
 };
-const TYPE_COLOR = { L1: "teal", L2: "blue", L3: "purple" };
+const TYPE_COLOR = {
+  L1: "teal", L2: "blue", L3: "purple",
+  ADJ_CONTRACT: "blue", ADJ_BONUS: "purple", ADJ: "blue",
+};
 
 function Mycommissionpage() {
   const currentUser = useAuthStore((s) => s.user);

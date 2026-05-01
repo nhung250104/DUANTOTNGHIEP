@@ -159,7 +159,10 @@ function App() {
         <Route path="/my-commission"                      element={<Mycommissionpage />} />
         <Route path="/my-promotion"                       element={<Mypromotionpage />} />
 
-        {/* Hợp đồng đối tác (user) */}
+        {/* Thông tin đối tác (user) — kế thừa Partnerdetailpage admin */}
+        <Route path="/my-partner-info"                    element={<Partnerdetailpage userMode />} />
+
+        {/* Hồ sơ HĐ đối tác (rates / requests) */}
         <Route path="/partner-contract"                   element={<Partnercontractpage />} />
         <Route path="/hop-dong-doi-tac"                   element={<Partnercontractlistpage />} />
         <Route path="/hop-dong-doi-tac/:source/:id"       element={<Partnercontractdetailpage />} />
