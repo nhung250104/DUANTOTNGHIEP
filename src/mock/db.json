@@ -145,7 +145,7 @@
       "phone": "0379187002",
       "password": "12345678",
       "role": "Đối tác",
-      "status": "locked",
+      "status": "active",
       "memberType": "NORMAL"
     },
     {
@@ -835,7 +835,7 @@
       "currentL2": 10,
       "currentL3": 3,
       "requestDetail": "Tôi muốn điều chỉnh tỉ lệ hoa hồng cấp 1 lên 25% do đã đạt doanh số mục tiêu quý 1/2026",
-      "status": "pending",
+      "status": "approved",
       "createdAt": "01/04/2026"
     },
     {
@@ -847,8 +847,32 @@
       "currentL2": 15,
       "currentL3": 7,
       "requestDetail": "chỉnh sửa hoa hồng ",
-      "status": "pending",
+      "status": "approved",
       "createdAt": "23/04/2026"
+    },
+    {
+      "id": "3",
+      "partnerId": "4",
+      "partnerCode": "DT000004",
+      "partnerName": "Nguyễn Văn D",
+      "errorType": "missing",
+      "errorTypeLabel": "Thiếu hoa hồng",
+      "description": "tôi ký hợp đồng 20tr nhưng khi nhận hoa hồng ít hơn 15%",
+      "evidenceFiles": [],
+      "relatedContractCode": "HDKH000001",
+      "adjustmentAmount": null,
+      "adminNote": null,
+      "currentL1": null,
+      "currentL2": null,
+      "currentL3": null,
+      "requestedL1": null,
+      "requestedL2": null,
+      "requestedL3": null,
+      "requestDetail": "tôi ký hợp đồng 20tr nhưng khi nhận hoa hồng ít hơn 15%",
+      "status": "approved",
+      "createdAt": "01/05/2026",
+      "processedAt": null,
+      "rejectReason": null
     }
   ],
   "branchTransferRequests": [
