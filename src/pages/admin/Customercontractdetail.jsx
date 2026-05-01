@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../store/api";
 import CustomerContractPDFModal from "./Customercontractpdfmodal";
+import BackButton from "../../components/BackButton";
 import "./CustomerContractPage.css";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
@@ -60,7 +61,7 @@ function Customercontractdetail({ isAdmin = false }) {
   if (error || !contract) return (
     <div className="cc-error-wrap">
       <p className="cc-error-msg">⚠️ {error || "Không tìm thấy hợp đồng."}</p>
-      <button className="cc-btn-back" onClick={() => navigate(-1)}>← Quay lại</button>
+      <BackButton />
     </div>
   );
 
@@ -71,7 +72,8 @@ function Customercontractdetail({ isAdmin = false }) {
       {/* ── Page title ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Quản lý hợp đồng khách hàng</h1>
+          <BackButton />
+          <h1 style={{ marginTop: 8 }}>Quản lý hợp đồng khách hàng</h1>
           <p>Quản lý toàn bộ hợp đồng khách hàng của đối tác</p>
         </div>
       </div>

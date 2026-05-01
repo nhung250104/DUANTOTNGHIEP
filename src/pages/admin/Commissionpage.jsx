@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../store/api";
+import BackButton from "../../components/BackButton";
 import "./CommissionPage.css";
 
 const fmt    = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
@@ -169,13 +170,14 @@ function CommissionPage() {
   const slice3 = level3Data.slice((page3-1)*PAGE_SIZE, page3*PAGE_SIZE);
 
   if (loading) return <div className="cp-loading"><div className="cp-spinner"/><p>Đang tải dữ liệu hoa hồng...</p></div>;
-  if (error)   return <div className="cp-error-wrap"><p>⚠️ {error}</p><button onClick={() => navigate(-1)}>← Quay lại</button></div>;
+  if (error)   return <div className="cp-error-wrap"><p>⚠️ {error}</p><BackButton /></div>;
 
   return (
     <div className="cp-page">
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Thông tin đối tác</h1>
+          <BackButton to={`/admin/partners-profile/${id}`} />
+          <h1 style={{ marginTop: 8 }}>Thông tin đối tác</h1>
           <p>{partner?.name}</p>
         </div>
         <div style={{ display:"flex", gap:10, alignSelf:"flex-end" }}>

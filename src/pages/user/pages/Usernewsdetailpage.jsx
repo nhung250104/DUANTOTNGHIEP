@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import newsService from "../../../store/newsService";
+import BackButton from "../../../components/BackButton";
 import "./Usernewsdetailpage.css";
 
 function Usernewsdetailpage() {
@@ -32,9 +33,7 @@ function Usernewsdetailpage() {
       {/* ── Header ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <button className="btn-back" onClick={() => navigate("/news")}>
-            ← Quay lại
-          </button>
+          <BackButton to="/dashboard" />
           <div style={{ marginTop: 8 }}>
             <h1>Tin tức</h1>
             <p>Cập nhật tin tức mới nhất</p>

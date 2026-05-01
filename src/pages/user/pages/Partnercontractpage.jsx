@@ -4,6 +4,7 @@ import useAuthStore from "../../../store/authStore";
 import partnerService from "../../../store/Partnerservice";
 import api from "../../../store/api";
 import CommissionRequestModal from "../../../components/CommissionRequestModal";
+import BackButton from "../../../components/BackButton";
 import "./PartnerContractPage.css";
 
 /* ─── Helpers ───────────────────────────────────────────── */
@@ -292,7 +293,7 @@ function Partnercontractpage() {
       <div className="pcp-error-wrap">
         <div className="pcp-error-icon">⚠️</div>
         <p className="pcp-error-msg">{error || "Không tìm thấy dữ liệu."}</p>
-        <button className="pcp-btn-back" onClick={() => navigate(-1)}>← Quay lại</button>
+        <BackButton />
       </div>
     );
   }

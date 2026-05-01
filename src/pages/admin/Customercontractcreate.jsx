@@ -12,6 +12,7 @@ import api from "../../store/api";
 import customerService from "../../store/customerService";
 import partnerService from "../../store/Partnerservice";
 import useAuthStore from "../../store/authStore";
+import BackButton from "../../components/BackButton";
 import "./Customercontractpage.css";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0);
@@ -282,7 +283,7 @@ function Customercontractcreate() {
     <div className="cc-page">
       <div className="page-header">
         <div className="page-header-left">
-          <button className="cc-btn-back-nav" onClick={() => navigate(-1)}>← Quay lại</button>
+          <BackButton />
           <h1 style={{ marginTop: 8 }}>Tạo hợp đồng khách hàng</h1>
           <p>Chọn khách hàng có sẵn và tải lên file hợp đồng để gửi admin duyệt</p>
         </div>

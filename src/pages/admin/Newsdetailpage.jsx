@@ -4,6 +4,7 @@ import NewsFormModal from "./NewsFormModal";
 import newsService from "../../store/newsService";
 import "./NewsDetailPage.css";
 import ConfirmModal from "../../components/ConfirmModal";
+import BackButton from "../../components/BackButton";
 
 function Newsdetailpage() {
   const { id } = useParams();
@@ -74,9 +75,7 @@ function Newsdetailpage() {
       {/* Header */}
       <div className="page-header">
         <div className="page-header-left">
-          <button className="btn-back" onClick={() => navigate("/admin/news")}>
-            ← Quay lại
-          </button>
+          <BackButton to="/admin/news" />
           <div style={{ marginTop: 8 }}>
             <h1>Tin tức</h1>
             <p>Cập nhật tin tức mới nhất</p>

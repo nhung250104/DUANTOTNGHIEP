@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
+import BackButton from "../../components/BackButton";
 import "./Partnerdetailpage.css";
 
 /* ─── Helper ─────────────────────────────────────────────── */
@@ -214,7 +215,7 @@ function Partnerdetailpage() {
   if (error || !partner) return (
     <div className="pd-error">
       ⚠️ {error || "Không tìm thấy hồ sơ này."}
-      <button onClick={() => navigate("/admin/partners")}>← Quay lại</button>
+      <BackButton to="/admin/partners" />
     </div>
   );
 
@@ -225,9 +226,7 @@ function Partnerdetailpage() {
       {/* ── Page header ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <button className="pd-btn-back" onClick={() => navigate("/admin/partners")}>
-            ← Quay lại
-          </button>
+          <BackButton to="/admin/partners" />
           <h1 style={{ marginTop: 8 }}>
             {isRequest ? "Thông tin yêu cầu trở thành đối tác" : "Thông tin đối tác"}
           </h1>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import useAuthStore from "../../../store/authStore";
 import partnerService from "../../../store/Partnerservice";
 import api from "../../../store/api";
+import BackButton from "../../../components/BackButton";
 import "./UpgradeRequestPage.css";
 
 /* ─── Helper: tạo id tăng dần ─────────────────────────── */
@@ -184,9 +185,7 @@ function Upgraderequestpage() {
         <h2>Gửi yêu cầu thành công!</h2>
         <p>Yêu cầu nâng cấp lên <strong>Hạng {(partner?.tier || 1) + 1}</strong> của bạn đã được gửi đến admin.</p>
         <p className="urp-success-sub">Chúng tôi sẽ xem xét và phản hồi trong vòng <strong>1-3 ngày làm việc</strong>.</p>
-        <button className="urp-btn-back" onClick={() => navigate("/dashboard")}>
-          ← Quay lại trang chủ
-        </button>
+        <BackButton to="/dashboard" label="Quay lại trang chủ" />
       </div>
     </div>
   );
@@ -199,7 +198,7 @@ function Upgraderequestpage() {
       {/* ── Header ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <button className="urp-btn-nav" onClick={() => navigate(-1)}>← Quay lại</button>
+          <BackButton />
           <h1 style={{ marginTop: 8 }}>Yêu cầu nâng cấp đối tác</h1>
           <p>Gửi yêu cầu nâng cấp từ Hạng {currentTierShown} lên Hạng {nextTier}</p>
         </div>

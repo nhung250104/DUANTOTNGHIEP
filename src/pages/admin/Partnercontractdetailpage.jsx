@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
 import PartnerContractPDFModal from "./Partnercontractpdfmodal";
+import BackButton from "../../components/BackButton";
 import "./PartnerContractPage.css";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
@@ -166,7 +167,7 @@ function Partnercontractdetailpage() {
   if (error || !contract) return (
     <div className="pc-error-wrap">
       <p>⚠️ {error}</p>
-      <button onClick={() => navigate(-1)}>← Quay lại</button>
+      <BackButton />
     </div>
   );
 
@@ -179,7 +180,8 @@ function Partnercontractdetailpage() {
       {/* ── Page title ── */}
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Thông tin hợp đồng đối tác</h1>
+          <BackButton />
+          <h1 style={{ marginTop: 8 }}>Thông tin hợp đồng đối tác</h1>
           <p>Thông tin hợp đồng đối tác</p>
         </div>
       </div>
