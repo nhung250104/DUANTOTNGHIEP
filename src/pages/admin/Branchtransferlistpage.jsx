@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
 import { notify } from "../../store/Notificationservice";
+import { logSystemAction } from "../../store/systemLogService";
 import "./Customercontractpage.css";
 
 const MAX_TREE_DEPTH = 3;
@@ -255,6 +256,8 @@ function Branchtransferlistpage() {
         memberType:     "NORMAL",
         level:          newLevel,
         levelLabel:     newLevelLabel,
+        // Đồng bộ mã giới thiệu của cấp trên mới — kéo theo cập nhật trong UI hợp đồng đối tác.
+        referralCode:   newParent.code || null,
         transferStatus: null,
       });
 
@@ -295,21 +298,12 @@ function Branchtransferlistpage() {
       }
 
       // 5. systemLog
-      try {
-        const slRes = await api.get("/systemLogs");
-        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
-          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
-        await api.post("/systemLogs", {
-          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
-          type:       "approve_branch_transfer",
-          actorId:    String(currentUser?.id || ""),
-          actorName:  currentUser?.name || "admin",
-          targetId:   String(partner.id),
-          targetType: "partner",
-          description: `Chuyển ${partner.name} từ ${approveTarget.currentParentName || "(gốc)"} sang ${approveTarget.newParentName}.`,
-          createdAt:  getNow(),
-        });
-      } catch { /* ignore */ }
+      await logSystemAction({
+        type:        "approve_branch_transfer",
+        actor:       currentUser,
+        target:      { id: partner.id, type: "partner" },
+        description: `Chuyển ${partner.name} từ ${approveTarget.currentParentName || "(gốc)"} sang ${approveTarget.newParentName}. Cấp mới: ${newLevelLabel}.`,
+      });
 
       // (F1 không cần update tay — Orgchart đếm động từ parentId. Tree tự rebuild khi reload.)
 
@@ -368,21 +362,12 @@ function Branchtransferlistpage() {
       } catch { /* ignore */ }
 
       // systemLog
-      try {
-        const slRes = await api.get("/systemLogs");
-        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
-          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
-        await api.post("/systemLogs", {
-          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
-          type:       "reject_branch_transfer",
-          actorId:    String(currentUser?.id || ""),
-          actorName:  currentUser?.name || "admin",
-          targetId:   String(rejectTarget.partnerId),
-          targetType: "partner",
-          description: `Từ chối chuyển nhánh ${rejectTarget.partnerName}: ${reason}${detail ? ` — ${detail}` : ""}`,
-          createdAt:  getNow(),
-        });
-      } catch { /* ignore */ }
+      await logSystemAction({
+        type:        "reject_branch_transfer",
+        actor:       currentUser,
+        target:      { id: rejectTarget.partnerId, type: "partner" },
+        description: `Từ chối chuyển nhánh ${rejectTarget.partnerName}: ${reason}${detail ? ` — ${detail}` : ""}`,
+      });
 
       setRequests((prev) => prev.map((r) => (r.id === rejectTarget.id ? updated : r)));
       setRejectTarget(null);

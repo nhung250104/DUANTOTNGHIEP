@@ -4,6 +4,7 @@ import partnerService from "../../store/Partnerservice";
 import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
 import { notify } from "../../store/Notificationservice";
+import { logSystemAction } from "../../store/systemLogService";
 import { autoPlaceOne, pickPlacement, DEFAULT_MAX_F1 } from "../../store/placementService";
 import "./Partnerprofilepage.css";
 
@@ -397,6 +398,14 @@ function Partnerprofilepage() {
         });
       }
 
+      // 6. Ghi systemLog
+      await logSystemAction({
+        type:        "approve_partner",
+        actor:       currentUser,
+        target:      { id: partner.id, type: "partner" },
+        description: `Duyệt hồ sơ đối tác "${partner.name}" (${partner.code}). Cấp khởi tạo: ${newLevelLabel}.`,
+      });
+
       alert(`✅ Đã duyệt hồ sơ "${partner.name}" thành công!`);
     } catch (err) {
       console.error(err);
@@ -440,6 +449,13 @@ function Partnerprofilepage() {
       }
 
       setPartners((prev) => prev.filter((p) => p.id !== partner.id));
+
+      await logSystemAction({
+        type:        "reject_partner",
+        actor:       currentUser,
+        target:      { id: partner.id, type: "partner" },
+        description: `Từ chối hồ sơ đối tác "${partner.name}" (${partner.code}).`,
+      });
     } catch {
       alert("Từ chối thất bại.");
     }
@@ -487,20 +503,15 @@ function Partnerprofilepage() {
           reason:     req.reason || "",
           createdAt:  new Date().toLocaleDateString("vi-VN"),
         });
-        const slId = await getMaxId("systemLogs");
-        await api.post("/systemLogs", {
-          id:         String(slId + 1),
-          type:       "approve_upgrade",
-          actorId:    String(currentUser?.id || ""),
-          actorName:  currentUser?.name || "admin",
-          targetId:   String(req.partnerId),
-          targetType: "partner",
-          description: `Nâng hạng ${req.partnerName} từ ${oldRank} lên ${newRank}`,
-          createdAt:  new Date().toLocaleDateString("vi-VN"),
-        });
       } catch (e) {
-        console.warn("Không ghi được promotionHistory/systemLog:", e);
+        console.warn("Không ghi được promotionHistory:", e);
       }
+      await logSystemAction({
+        type:        "approve_upgrade",
+        actor:       currentUser,
+        target:      { id: req.partnerId, type: "partner" },
+        description: `Nâng hạng ${req.partnerName} từ ${oldRank} lên ${newRank}`,
+      });
 
       // Notify user (đối tác)
       if (partner?.userId) {
@@ -567,6 +578,13 @@ function Partnerprofilepage() {
       setUpgradeRequests((prev) =>
         prev.map((r) => r.id === req.id ? { ...r, status: "rejected" } : r)
       );
+
+      await logSystemAction({
+        type:        "reject_upgrade",
+        actor:       currentUser,
+        target:      { id: req.partnerId, type: "partner" },
+        description: `Từ chối yêu cầu nâng hạng của ${req.partnerName} (${req.currentRank || "?"} → ${req.newRank || "?"}).`,
+      });
     } catch {
       alert("Từ chối thất bại.");
     }
@@ -939,25 +957,49 @@ function JoinTeamTab({ requests, partners, currentUser, onChange }) {
     if (!window.confirm(`Duyệt yêu cầu của ${req.partnerName} dưới cấp trên ${req.newParentName || "(chưa chọn)"}?`)) return;
     setBusy(req.id);
     try {
-      // Cập nhật partner: gắn parentId + đổi memberType + tính level từ parent.
+      // Cập nhật partner: gắn parentId + đổi memberType + tính level từ parent + sync referralCode.
       const pRes = await api.get(`/partners/${req.partnerId}`);
       const partner = pRes.data;
+      let parent = null;
       if (partner) {
         let newLevel = null;
         if (req.newParentId) {
           try {
             const parentRes = await api.get(`/partners/${req.newParentId}`);
-            const parentLvl = Number(parentRes.data?.level);
+            parent = parentRes.data;
+            const parentLvl = Number(parent?.level);
             newLevel = Math.min(3, (Number.isFinite(parentLvl) ? parentLvl : 0) + 1);
           } catch { newLevel = 1; }
         }
         await api.put(`/partners/${req.partnerId}`, {
           ...partner,
-          parentId:   req.newParentId || null,
-          memberType: "NORMAL",
-          level:      newLevel,
-          levelLabel: newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp",
+          parentId:     req.newParentId || null,
+          memberType:   "NORMAL",
+          level:        newLevel,
+          levelLabel:   newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp",
+          referralCode: parent?.code || null,
         });
+
+        // Đồng bộ level cho descendant nếu partner đã có nhánh con (defensive — thường awaiting partner chưa có).
+        if (newLevel != null) {
+          try {
+            const allRes = await api.get("/partners");
+            const all    = Array.isArray(allRes.data) ? allRes.data : [];
+            const queue  = all
+              .filter((p) => String(p.parentId) === String(partner.id))
+              .map((p) => ({ p, depth: newLevel + 1 }));
+            const visited = new Set([String(partner.id)]);
+            while (queue.length > 0) {
+              const { p, depth } = queue.shift();
+              if (visited.has(String(p.id))) continue;
+              visited.add(String(p.id));
+              const cap = Math.min(3, depth);
+              await api.put(`/partners/${p.id}`, { ...p, level: cap, levelLabel: `Cấp ${cap}` });
+              all.filter((c) => String(c.parentId) === String(p.id))
+                 .forEach((c) => queue.push({ p: c, depth: depth + 1 }));
+            }
+          } catch (e) { console.warn("Recompute descendants failed:", e); }
+        }
       }
       const updated = { ...req, status: "approved", processedAt: new Date().toLocaleDateString("vi-VN") };
       await api.put(`/joinTeamRequests/${req.id}`, updated);
@@ -976,23 +1018,12 @@ function JoinTeamTab({ requests, partners, currentUser, onChange }) {
         });
       }
 
-      // systemLog
-      try {
-        const slRes  = await api.get("/systemLogs");
-        const slList = Array.isArray(slRes.data) ? slRes.data : [];
-        const slMax  = slList.map((x) => Number(x.id)).filter((n) => !isNaN(n));
-        const slId   = String((slMax.length > 0 ? Math.max(...slMax) : 0) + 1);
-        await api.post("/systemLogs", {
-          id: slId,
-          type: "approve_join_team",
-          actorId: String(currentUser?.id || ""),
-          actorName: currentUser?.name || "admin",
-          targetId: String(req.partnerId),
-          targetType: "partner",
-          description: `Duyệt yêu cầu tham gia đội nhóm cho ${req.partnerName}, gắn dưới ${req.newParentName || "(gốc)"}.`,
-          createdAt: new Date().toLocaleDateString("vi-VN"),
-        });
-      } catch { /* ignore */ }
+      await logSystemAction({
+        type:        "approve_join_team",
+        actor:       currentUser,
+        target:      { id: req.partnerId, type: "partner" },
+        description: `Duyệt yêu cầu tham gia đội nhóm cho ${req.partnerName}, gắn dưới ${req.newParentName || "(gốc)"}.`,
+      });
 
       await onChange();
     } catch (e) {
@@ -1032,6 +1063,13 @@ function JoinTeamTab({ requests, partners, currentUser, onChange }) {
           });
         }
       } catch { /* ignore */ }
+
+      await logSystemAction({
+        type:        "reject_join_team",
+        actor:       currentUser,
+        target:      { id: req.partnerId, type: "partner" },
+        description: `Từ chối yêu cầu tham gia đội nhóm của ${req.partnerName}: ${reason}`,
+      });
 
       await onChange();
     } catch (e) {
@@ -1155,22 +1193,12 @@ function AutoPlaceButton({ partner, allPartners, currentUser, onChange }) {
           partnerName:     partner.name,
         });
       }
-      // systemLog
-      try {
-        const slRes = await api.get("/systemLogs");
-        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
-          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
-        await api.post("/systemLogs", {
-          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
-          type:       "auto_place_partner",
-          actorId:    String(currentUser?.id || ""),
-          actorName:  currentUser?.name || "admin",
-          targetId:   String(partner.id),
-          targetType: "partner",
-          description: `Auto-place ${partner.name} dưới ${res.parent.name} (id=${res.parent.id})`,
-          createdAt:  new Date().toLocaleDateString("vi-VN"),
-        });
-      } catch { /* ignore */ }
+      await logSystemAction({
+        type:        "auto_place_partner",
+        actor:       currentUser,
+        target:      { id: partner.id, type: "partner" },
+        description: `Auto-place ${partner.name} dưới ${res.parent.name} (id=${res.parent.id})`,
+      });
 
       await onChange();
     } catch (e) {
@@ -1243,21 +1271,12 @@ function BulkAutoPlaceButton({ awaitingPartners, currentUser, onChange }) {
     setProgress(null);
 
     // 1 systemLog gộp cho cả batch
-    try {
-      const slRes = await api.get("/systemLogs");
-      const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
-        .map((x) => Number(x.id)).filter((n) => !isNaN(n));
-      await api.post("/systemLogs", {
-        id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
-        type:       "auto_place_bulk",
-        actorId:    String(currentUser?.id || ""),
-        actorName:  currentUser?.name || "admin",
-        targetId:   "",
-        targetType: "partners_batch",
-        description: `Auto-place batch: ${success}/${awaitingPartners.length} thành công, ${failed} thất bại.`,
-        createdAt:  new Date().toLocaleDateString("vi-VN"),
-      });
-    } catch { /* ignore */ }
+    await logSystemAction({
+      type:        "auto_place_bulk",
+      actor:       currentUser,
+      target:      { id: "", type: "partners_batch" },
+      description: `Auto-place batch: ${success}/${awaitingPartners.length} thành công, ${failed} thất bại.`,
+    });
 
     setBusy(false);
     alert(`Hoàn tất: ${success} thành công, ${failed} thất bại.`);

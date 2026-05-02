@@ -17,7 +17,9 @@
 
 import { useState, useEffect } from "react";
 import api from "../../store/api";
+import useAuthStore from "../../store/authStore";
 import { notify } from "../../store/Notificationservice";
+import { logSystemAction } from "../../store/systemLogService";
 import "./Customercontractpage.css";
 
 const PAGE_SIZE = 10;
@@ -251,6 +253,7 @@ function RejectModal({ target, onClose, onConfirm, loading }) {
 
 /* ─── Page ──────────────────────────────────────── */
 function Commissionrequestlistpage() {
+  const currentUser = useAuthStore((s) => s.user);
   const [requests, setRequests] = useState([]);
   const [loading,  setLoading ] = useState(true);
   const [error,    setError   ] = useState("");
@@ -365,21 +368,12 @@ function Commissionrequestlistpage() {
       await api.put(`/commissionRequests/${approveTarget.id}`, updated);
 
       // 4. systemLog
-      try {
-        const slRes = await api.get("/systemLogs");
-        const slIds = (Array.isArray(slRes.data) ? slRes.data : [])
-          .map((x) => Number(x.id)).filter((n) => !isNaN(n));
-        await api.post("/systemLogs", {
-          id:         String((slIds.length > 0 ? Math.max(...slIds) : 0) + 1),
-          type:       "approve_commission_adjustment",
-          actorId:    "",
-          actorName:  "admin",
-          targetId:   String(approveTarget.partnerId),
-          targetType: "partner",
-          description: `Điều chỉnh ${adjustmentAmount >= 0 ? "+" : ""}${fmtMoney(adjustmentAmount)}đ (${isContract ? `theo HĐ ${relatedContractCode}` : "bonus"}) cho ${approveTarget.partnerName} (req #${approveTarget.id})${adminNote ? ` — ${adminNote}` : ""}`,
-          createdAt:  getNow(),
-        });
-      } catch { /* ignore */ }
+      await logSystemAction({
+        type:        "approve_commission_adjustment",
+        actor:       currentUser,
+        target:      { id: approveTarget.partnerId, type: "partner" },
+        description: `Điều chỉnh ${adjustmentAmount >= 0 ? "+" : ""}${fmtMoney(adjustmentAmount)}đ (${isContract ? `theo HĐ ${relatedContractCode}` : "bonus"}) cho ${approveTarget.partnerName} (req #${approveTarget.id})${adminNote ? ` — ${adminNote}` : ""}`,
+      });
 
       setRequests((prev) => prev.map((r) => (r.id === approveTarget.id ? updated : r)));
       setApproveTarget(null);
@@ -423,6 +417,13 @@ function Commissionrequestlistpage() {
 
       setRequests((prev) => prev.map((r) => (r.id === rejectTarget.id ? updated : r)));
       setRejectTarget(null);
+
+      await logSystemAction({
+        type:        "reject_commission_adjustment",
+        actor:       currentUser,
+        target:      { id: rejectTarget.partnerId, type: "partner" },
+        description: `Từ chối yêu cầu chỉnh sửa hoa hồng của ${rejectTarget.partnerName} (req #${rejectTarget.id}): ${reason}${detail ? ` — ${detail}` : ""}`,
+      });
     } catch (e) {
       console.error(e);
       alert("Từ chối thất bại. Vui lòng thử lại.");

@@ -107,5 +107,22 @@ export async function autoPlaceOne(target, maxPerNode = DEFAULT_MAX_F1) {
   };
   await api.put(`/partners/${fresh.id}`, updated);
 
+  // Recompute level cho descendant (defensive — awaiting partner thường chưa có nhánh con).
+  try {
+    const queue = all
+      .filter((p) => String(p.parentId) === String(fresh.id))
+      .map((p) => ({ p, depth: newLevel + 1 }));
+    const visited = new Set([String(fresh.id)]);
+    while (queue.length > 0) {
+      const { p, depth } = queue.shift();
+      if (visited.has(String(p.id))) continue;
+      visited.add(String(p.id));
+      const cap = Math.min(MAX_TREE_DEPTH, depth);
+      await api.put(`/partners/${p.id}`, { ...p, level: cap, levelLabel: `Cấp ${cap}` });
+      all.filter((c) => String(c.parentId) === String(p.id))
+         .forEach((c) => queue.push({ p: c, depth: depth + 1 }));
+    }
+  } catch (e) { /* non-blocking */ }
+
   return { ok: true, partner: updated, parent };
 }
