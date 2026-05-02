@@ -11,28 +11,33 @@ import "./Orgchartpage.css";
 const fmt = (n) =>
   n != null ? n.toLocaleString("vi-VN") + " đ" : "—";
 
-/** Build map id → node với children */
+/** Build map id → node với children. Bỏ qua entry không có id để tránh undefined-key. */
 function buildMap(list) {
   const map = {};
-  list.forEach((p) => { map[p.id] = { ...p, children: [] }; });
-  list.forEach((p) => {
-    if (p.parentId && map[p.parentId]) {
+  (list || []).forEach((p) => {
+    if (p?.id != null) map[p.id] = { ...p, children: [] };
+  });
+  (list || []).forEach((p) => {
+    if (p?.parentId && map[p.parentId] && map[p.id] && p.id !== p.parentId) {
       map[p.parentId].children.push(map[p.id]);
     }
   });
   return map;
 }
 
-/** Lấy tất cả descendants kể cả bản thân */
-function getAll(node) {
-  if (!node) return [];
-  return [node, ...(node.children || []).flatMap(getAll)];
+/** Lấy tất cả descendants kể cả bản thân. */
+function getAll(node, seen = new Set()) {
+  if (!node || seen.has(node.id)) return [];
+  seen.add(node.id);
+  return [node, ...(node.children || []).flatMap((c) => getAll(c, seen))];
 }
 
-/** Tính relative level từ root (root = 1) */
-function assignRelLevel(node, rel = 1) {
+/** Tính relative level từ root (root = 1). Có cycle-guard để không crash stack. */
+function assignRelLevel(node, rel = 1, seen = new Set()) {
+  if (!node || seen.has(node.id)) return;
+  seen.add(node.id);
   node._rel = rel;
-  (node.children || []).forEach((c) => assignRelLevel(c, rel + 1));
+  (node.children || []).forEach((c) => assignRelLevel(c, rel + 1, seen));
 }
 
 /* ══════════════════════════════════════════════
@@ -133,9 +138,10 @@ function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter, gh
 ══════════════════════════════════════════════ */
 function StatsTable({ rootNode, rootName }) {
   const all = getAll(rootNode);
+  if (all.length === 0) return null;
 
   // group by _rel level
-  const maxRel = Math.max(...all.map((n) => n._rel ?? 1));
+  const maxRel = Math.max(1, ...all.map((n) => n._rel ?? 1));
   const rows = Array.from({ length: maxRel }, (_, i) => {
     const lvl   = i + 1;
     const group = all.filter((n) => n._rel === lvl);
@@ -256,32 +262,41 @@ function Orgchartpage({ userMode = false } = {}) {
   ──────────────────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (!userMode || !currentUser || allPartners.length === 0) return;
-    const me = allPartners.find(
-      (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
-    );
-    if (!me) return;
+    try {
+      const me = allPartners.find(
+        (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
+      );
+      if (!me) {
+        // User chưa có hồ sơ partner approved → hiển thị empty state riêng (không phải search).
+        setRootNode(null);
+        return;
+      }
 
-    setSearchText(me.name);
+      setSearchText(me.name);
 
-    // Tạo node me KHÔNG có children (strip mọi descendants)
-    const meNodeStripped = { ...me, children: [] };
+      // Tạo node me KHÔNG có children (strip mọi descendants)
+      const meNodeStripped = { ...me, children: [] };
 
-    let root;
-    if (me.parentId) {
-      const parent = allPartners.find((p) => String(p.id) === String(me.parentId));
-      if (parent) {
-        // Parent CHỈ có 1 child = me, không có siblings/descendants khác
-        root = { ...parent, children: [meNodeStripped] };
+      let root;
+      if (me.parentId) {
+        const parent = allPartners.find((p) => String(p.id) === String(me.parentId));
+        if (parent) {
+          // Parent CHỈ có 1 child = me, không có siblings/descendants khác
+          root = { ...parent, children: [meNodeStripped] };
+        } else {
+          root = meNodeStripped;
+        }
       } else {
         root = meNodeStripped;
       }
-    } else {
-      root = meNodeStripped;
-    }
-    assignRelLevel(root, 1);
+      assignRelLevel(root, 1);
 
-    setExpandedIds(new Set([root.id, meNodeStripped.id]));
-    setRootNode(root);
+      setExpandedIds(new Set([root.id, meNodeStripped.id]));
+      setRootNode(root);
+    } catch (e) {
+      console.error("Build user tree failed:", e);
+      setError("Lỗi khi dựng sơ đồ cây của bạn.");
+    }
   }, [userMode, currentUser, allPartners]);
 
   /* ── Build tree khi root thay đổi ── */
@@ -452,7 +467,11 @@ function Orgchartpage({ userMode = false } = {}) {
       {!loading && !error && !rootNode && (
         <div className="oc-empty">
           <div className="oc-empty-icon">🔍</div>
-          <p>Hãy nhập thông tin đối tác mà bạn muốn xem sơ đồ quan hệ</p>
+          <p>
+            {userMode
+              ? "Bạn chưa có hồ sơ đối tác đã duyệt — chưa thể hiển thị sơ đồ cây. Vui lòng liên hệ admin nếu hồ sơ đã được duyệt nhưng vẫn không thấy."
+              : "Hãy nhập thông tin đối tác mà bạn muốn xem sơ đồ quan hệ"}
+          </p>
         </div>
       )}
 

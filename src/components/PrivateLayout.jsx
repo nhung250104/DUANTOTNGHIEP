@@ -1,6 +1,7 @@
 import { Outlet, Navigate } from "react-router-dom";
 import HeaderLogin from "../components/HeaderLogin";
 import Sidebar     from "../components/Sidebar";
+import ErrorBoundary from "../components/ErrorBoundary";
 import useAuthStore from "../store/authStore";
 
 function PrivateLayout({ adminOnly = false }) {
@@ -21,7 +22,9 @@ function PrivateLayout({ adminOnly = false }) {
       <div className="private-body">
         <Sidebar />
         <main className="private-content">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
