@@ -95,7 +95,7 @@ function CustomerModal({ initial, onClose, onSubmit, loading, isAdmin, partners 
                 <option value="">— Chọn đối tác —</option>
                 {approvedPartners.map((p) => (
                   <option key={p.id} value={String(p.userId)}>
-                    {p.name} · DT{String(p.code || p.id).padStart(6, "0")}
+                    {p.name} · {String(p.code || p.id).padStart(6, "0")}
                   </option>
                 ))}
               </select>
@@ -405,7 +405,7 @@ function Customerpage({ isAdmin = false }) {
                               <>
                                 <div>{owner.name}</div>
                                 <div style={{ fontSize: 11, color: "#94a3b8" }}>
-                                  DT{String(owner.code || owner.id).padStart(6, "0")}
+                                  {String(owner.code || owner.id).padStart(6, "0")}
                                 </div>
                               </>
                             ) : "—"}

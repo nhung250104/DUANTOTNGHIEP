@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
 import useAuthStore from "../../store/authStore";
+import { logSystemAction } from "../../store/systemLogService";
 import BackButton from "../../components/BackButton";
 import "./Partnerdetailpage.css";
 
@@ -197,6 +198,12 @@ function Partnerdetailpage({ userMode = false } = {}) {
       setPartner(p => ({ ...p, status: "rejected", rejectReason: reason }));
       setModal(null);
       setDone("rejected");
+      await logSystemAction({
+        type:        "reject_partner",
+        actor:       currentUser,
+        target:      { id: partner.id, type: "partner" },
+        description: `Từ chối hồ sơ đối tác "${partner.name}" (${partner.code}): ${reason || "(không nêu lý do)"}.`,
+      });
     } catch {
       alert("Từ chối thất bại, vui lòng thử lại.");
     } finally {
@@ -227,6 +234,12 @@ function Partnerdetailpage({ userMode = false } = {}) {
       setPartner(updated);
       setModal(null);
       setDone("approved");
+      await logSystemAction({
+        type:        "approve_partner",
+        actor:       currentUser,
+        target:      { id: updated.id, type: "partner" },
+        description: `Duyệt hồ sơ đối tác "${updated.name}" (${updated.code}). ${updated.levelLabel}.`,
+      });
     } catch {
       alert("Phê duyệt thất bại, vui lòng thử lại.");
     } finally {
