@@ -226,7 +226,7 @@ function Customercontractcreate() {
         id:              String(maxId + 1),
         code,
         partnerId:       me.id,
-        partnerCode:     `DT${me.code}`,
+        partnerCode:     `${me.code}`,
         partnerName:     me.name,
         // Reference + snapshot khách hàng
         customerId:      String(customer.id),

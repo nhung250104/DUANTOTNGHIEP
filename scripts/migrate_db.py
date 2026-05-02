@@ -85,30 +85,67 @@ def main():
         })
         d["promotionHistory"] = promotions
 
-    # 6. Mô hình mới: chỉ có 1 khái niệm "level" (cấp). 4 cấp 0..3.
-    #    Cấp 0 = cao nhất; Cấp 3 = thấp nhất (mới đăng ký).
-    #    Upgrade đi NGƯỢC: 3 → 2 → 1 → 0.
-    #    Migration:
-    #      - Nếu partner còn field `tier` (1/2/3) ⇒ invert sang level: 4 - tier.
-    #        (tier 1 = mới đăng ký → level 3, tier 3 = đã max cũ → level 1)
-    #      - Xoá field `tier`, `tierLabel`.
-    #      - levelLabel = "Cấp X" (X = 0..3).
+    # 6. Tách 2 khái niệm rõ ràng:
+    #    - level (cấp trong cây): 0=ROOT, 1=F1, 2=F2, 3=F3. Tính từ parentId chain.
+    #    - rank  (hạng): "Member" | "Leader" | "Partner" | "Senior Partner". Theo KPI.
     partners = d.get("partners", [])
+
+    # Map old field semantic → rank.
+    # Lịch sử migrate: level cũ trước đây từng là tier (3=newcomer, 0=top).
+    # Map: level cũ 3→Member, 2→Leader, 1→Partner, 0→Senior Partner.
+    OLD_LEVEL_TO_RANK = {3: "Member", 2: "Leader", 1: "Partner", 0: "Senior Partner"}
+
+    # Step 1: Backup level/tier cũ thành rank (chỉ làm 1 lần)
     for p in partners:
+        if p.get("rank"):
+            continue  # đã migrate
         if p.get("tier") in (1, 2, 3):
-            new_level = 4 - p["tier"]   # 1→3, 2→2, 3→1
+            # tier 1=newcomer, 3=top
+            tier_to_rank = {1: "Member", 2: "Leader", 3: "Partner"}
+            p["rank"] = tier_to_rank.get(p["tier"], "Member")
         elif isinstance(p.get("level"), int) and 0 <= p["level"] <= 3:
-            # Đã có level theo schema mới — giữ nguyên
-            new_level = p["level"]
+            p["rank"] = OLD_LEVEL_TO_RANK.get(p["level"], "Member")
         else:
-            # Default partner mới: level 3 (thấp nhất)
-            new_level = 3
-        p["level"]      = new_level
-        p["levelLabel"] = f"Cấp {new_level}"
+            p["rank"] = "Member"
+        p["rankLabel"] = p["rank"]
         p.pop("tier", None)
         p.pop("tierLabel", None)
 
-    # 7. Đảm bảo $schema vẫn nằm cuối (cho tidy)
+    # Step 2: Recompute level = tree depth (0..3, cap 3)
+    by_id = {str(p.get("id")): p for p in partners}
+
+    def compute_depth(pid, seen=None):
+        seen = seen or set()
+        if pid in seen:
+            return 0  # cycle guard
+        seen.add(pid)
+        p = by_id.get(str(pid))
+        if not p or not p.get("parentId"):
+            return 0
+        return min(3, compute_depth(str(p["parentId"]), seen) + 1)
+
+    for p in partners:
+        depth = compute_depth(str(p.get("id")))
+        p["level"]      = depth
+        p["levelLabel"] = f"Cấp {depth}"
+
+    # 7. Migrate upgradeRequests: thêm currentRank/newRank cho entry chỉ có currentLevel.
+    #    Lý do: spec mới — nâng cấp = nâng HẠNG (rank) chứ không phải level.
+    OLD_LEVEL_TO_RANK_LEGACY = {3: "Member", 2: "Leader", 1: "Partner", 0: "Senior Partner"}
+    NEXT_RANK = {"Member": "Leader", "Leader": "Partner", "Partner": "Senior Partner"}
+    for r in d.get("upgradeRequests", []):
+        if r.get("currentRank") and r.get("newRank"):
+            continue
+        # Suy ra hạng cũ từ currentLevel cũ (semantic legacy: 3=newcomer/Member, 0=top).
+        old_lvl = r.get("currentLevel")
+        if isinstance(old_lvl, int):
+            cur_rank = OLD_LEVEL_TO_RANK_LEGACY.get(old_lvl, "Member")
+        else:
+            cur_rank = "Member"
+        r["currentRank"] = r.get("currentRank") or cur_rank
+        r["newRank"]     = r.get("newRank") or NEXT_RANK.get(cur_rank, cur_rank)
+
+    # 8. Đảm bảo $schema vẫn nằm cuối (cho tidy)
     schema = d.pop("$schema", None)
     if schema is not None:
         d["$schema"] = schema

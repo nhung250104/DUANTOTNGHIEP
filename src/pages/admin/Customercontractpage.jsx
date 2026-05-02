@@ -25,15 +25,15 @@ const getNow = () => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
-// Hoa hồng theo CẤP (level 0..3). 0 = cao nhất, 3 = mới đăng ký.
+// Hoa hồng theo HẠNG (rank). KHÔNG dựa vào level (cấp trong cây).
 const DEFAULT_RATES = {
-  0: { l1: 35, l2: 18, l3: 10 }, // Cấp 0 (top)
-  1: { l1: 30, l2: 15, l3: 7  },
-  2: { l1: 25, l2: 12, l3: 5  },
-  3: { l1: 20, l2: 10, l3: 3  }, // Cấp 3 (mới đăng ký)
+  "Member":         { l1: 20, l2: 10, l3: 3  },
+  "Leader":         { l1: 25, l2: 12, l3: 5  },
+  "Partner":        { l1: 30, l2: 15, l3: 7  },
+  "Senior Partner": { l1: 35, l2: 18, l3: 10 },
 };
 const ratesOf = (partner) =>
-  partner?.commissionRates || DEFAULT_RATES[partner?.level] || DEFAULT_RATES[3];
+  partner?.commissionRates || DEFAULT_RATES[partner?.rank] || DEFAULT_RATES["Member"];
 
 const nextId = async (collection) => {
   try {
@@ -591,6 +591,7 @@ function CustomerContractPage({ isAdmin = false }) {
                 <tr>
                   <th>Mã HĐ</th>
                   {isAdmin && <th>Đối tác</th>}
+                  <th>Mã đối tác</th>
                   <th>Khách hàng</th>
                   <th>Ngày ký</th>
                   <th>Ngày hết hạn</th>
@@ -602,7 +603,7 @@ function CustomerContractPage({ isAdmin = false }) {
               <tbody>
                 {pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 8 : 7} className="cc-empty">
+                    <td colSpan={isAdmin ? 9 : 8} className="cc-empty">
                       Không có hợp đồng nào
                     </td>
                   </tr>
@@ -628,6 +629,7 @@ function CustomerContractPage({ isAdmin = false }) {
                           </span>
                         </td>
                         {isAdmin && <td>{c.partnerName}</td>}
+                        <td style={{ color: "#0d9488", fontWeight: 600 }}>{c.partnerCode || "—"}</td>
                         <td>{c.customerName}</td>
                         <td>{c.signDate}</td>
                         <td>{c.expireDate}</td>
@@ -655,6 +657,7 @@ function CustomerContractPage({ isAdmin = false }) {
                 <tr>
                   <th>Mã HĐ</th>
                   {isAdmin && <th>Đối tác</th>}
+                  <th>Mã đối tác</th>
                   <th>Khách hàng</th>
                   <th>Ngày gửi</th>
                   <th>Giá trị</th>
@@ -665,7 +668,7 @@ function CustomerContractPage({ isAdmin = false }) {
               <tbody>
                 {pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 7 : 5} className="cc-empty">
+                    <td colSpan={isAdmin ? 8 : 6} className="cc-empty">
                       Không có hợp đồng chờ duyệt
                     </td>
                   </tr>
@@ -686,6 +689,7 @@ function CustomerContractPage({ isAdmin = false }) {
                         <span className="cc-code cc-code--active">{c.code}</span>
                       </td>
                       {isAdmin && <td>{c.partnerName}</td>}
+                      <td style={{ color: "#0d9488", fontWeight: 600 }}>{c.partnerCode || "—"}</td>
                       <td>{c.customerName}</td>
                       <td>{c.createdAt}</td>
                       <td><strong>{fmt(c.value)}</strong></td>

@@ -77,7 +77,7 @@ function CommissionRequestModal({ partner, defaultContractCode = "", onClose, on
       const newRequest = {
         id:                  String(maxId + 1),
         partnerId:           String(partner.id),
-        partnerCode:         `DT${String(partner.code || partner.id).padStart(6, "0")}`,
+        partnerCode:         `${String(partner.code || partner.id).padStart(6, "0")}`,
         partnerName:         partner.name,
         errorType:           form.errorType,
         errorTypeLabel:      errLabel,

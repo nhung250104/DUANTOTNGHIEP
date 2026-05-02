@@ -11,16 +11,14 @@ const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
 const getInitials = (name = "") =>
   name.trim().split(" ").filter(Boolean).slice(-2).map((w) => w[0].toUpperCase()).join("");
 
-// Cấp 0 = cao nhất, Cấp 3 = mới đăng ký
-const getCommissionByLevel = (level = 3) => {
-  const table = {
-    0: { l1: 35, l2: 18, l3: 10 },
-    1: { l1: 30, l2: 15, l3: 7  },
-    2: { l1: 25, l2: 12, l3: 5  },
-    3: { l1: 20, l2: 10, l3: 3  },
-  };
-  return table[level] || table[3];
+// Hoa hồng theo HẠNG (rank).
+const RANK_RATES = {
+  "Member":         { l1: 20, l2: 10, l3: 3  },
+  "Leader":         { l1: 25, l2: 12, l3: 5  },
+  "Partner":        { l1: 30, l2: 15, l3: 7  },
+  "Senior Partner": { l1: 35, l2: 18, l3: 10 },
 };
+const getCommissionByRank = (rank = "Member") => RANK_RATES[rank] || RANK_RATES["Member"];
 
 /* ─── Components ─────────────────────────────────────────── */
 function InfoItem({ label, value, highlight }) {
@@ -76,12 +74,12 @@ function Partnercontractdetailpage() {
         if (source === "partner") {
           const res     = await api.get(`/partners/${id}`);
           const partner = res.data;
-          const comm    = getCommissionByLevel(partner.level ?? 3);
+          const comm    = getCommissionByRank(partner.rank);
 
           setRawPartner(partner);
           setContract({
             code:            `HDDT${String(partner.id).padStart(6, "0")}`,
-            partnerCode:     `DT${String(partner.code || partner.id).padStart(6, "0")}`,
+            partnerCode:     `${String(partner.code || partner.id).padStart(6, "0")}`,
             partnerName:     partner.name,
             partnerEmail:    partner.email,
             partnerPhone:    partner.phone,
@@ -91,7 +89,8 @@ function Partnercontractdetailpage() {
             signDate:        partner.joinDate,
             status:          partner.status === "approved" ? "approved" : "pending",
             contractFile:    partner.contractFile,
-            level:           1,
+            level:           partner.level ?? 0,
+            rank:            partner.rank || "Member",
             commissionL1:    comm.l1,
             commissionL2:    comm.l2,
             commissionL3:    comm.l3,
@@ -106,26 +105,27 @@ function Partnercontractdetailpage() {
           const upgrade   = upRes.data;
           const pRes2     = await api.get(`/partners/${upgrade.partnerId}`);
           const partner   = pRes2.data;
-          // Upgrade direction: cấp giảm dần (3 → 2 → 1 → 0). currentLevel field
-          // trong upgradeRequest = level ngay TRƯỚC khi nâng (legacy có thể là tier).
-          const oldLvl    = upgrade.currentLevel ?? upgrade.currentTier ?? 3;
-          const nextLevel = Math.max(0, oldLvl - 1);
-          const comm      = getCommissionByLevel(nextLevel);
+          // Hợp đồng nâng cấp: dùng newRank trên upgradeRequest (Member→Leader→Partner→Senior Partner).
+          const newRank   = upgrade.newRank || partner?.rank || "Leader";
+          const comm      = getCommissionByRank(newRank);
 
           setRawPartner(partner);
           setContract({
-            code:            `HDDT-C${nextLevel}-${String(upgrade.id).padStart(4, "0")}`,
-            partnerCode:     upgrade.partnerCode || `DT${String(upgrade.partnerId).padStart(6, "0")}`,
+            // Mã HĐ nâng cấp: HDDT + 6 chữ số tăng dần (lấy theo upgrade id, +1000 để tách
+            // khỏi HĐ đăng ký đầu tiên, đảm bảo không trùng).
+            code:            `HDDT${String(1000 + Number(upgrade.id)).padStart(6, "0")}`,
+            partnerCode:     upgrade.partnerCode || `${String(upgrade.partnerId).padStart(6, "0")}`,
             partnerName:     upgrade.partnerName,
             partnerEmail:    partner?.email,
             partnerPhone:    partner?.phone,
             partnerAddress:  partner?.address,
             partnerCccd:     partner?.cccd,
-            contractType:    `Đăng ký làm đối tác cấp ${nextLevel}`,
+            contractType:    `Nâng hạng lên ${newRank}`,
             signDate:        upgrade.approvedAt || upgrade.submittedAt,
             status:          "approved",
             contractFile:    upgrade.contractFile,
-            level:           nextLevel,
+            level:           partner?.level ?? 0,
+            rank:            newRank,
             commissionL1:    comm.l1,
             commissionL2:    comm.l2,
             commissionL3:    comm.l3,
