@@ -289,9 +289,11 @@ function Partnercontractpage() {
 
   const commission   = getCommissionRates(partner);
   const contractCode = `HDDT${String(partner.id).padStart(6, "0")}`;
-  // Có thể nâng hạng nếu rank chưa phải Senior Partner.
-  const canUpgrade    = (partner.rank || "Member") !== "Senior Partner";
   const isIndependent = partner.memberType === "INDEPENDENT";
+  // Chỉ cho nâng hạng khi: đã có cấp trong cây + chưa đạt Senior Partner + không phải INDEPENDENT.
+  const canUpgrade   = !isIndependent
+                    && partner.level != null
+                    && (partner.rank || "Member") !== "Senior Partner";
 
   // Stats: HĐ KH approved + doanh thu
   const approvedContracts = contracts.filter((c) => c.status === "approved");
@@ -424,21 +426,35 @@ function Partnercontractpage() {
               <li>Được hỗ trợ đào tạo, tài liệu sản phẩm, công cụ bán hàng từ Bên A.</li>
             </ul>
 
-            <p style={{ fontWeight: 700, color: "#0f172a", margin: "12px 0 4px" }}>Điều 3. Tỉ lệ hoa hồng (Cấp {partner.level ?? 3})</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 8 }}>
-              <div className="pcp-commission-card">
-                <span className="pcp-commission-card-label">Cấp 1 — HĐ tự ký</span>
-                <span className="pcp-commission-card-value">{commission.l1}%</span>
+            <p style={{ fontWeight: 700, color: "#0f172a", margin: "12px 0 4px" }}>
+              Điều 3. Tỉ lệ hoa hồng{partner.level != null ? ` (Cấp ${partner.level})` : ""}
+            </p>
+            {partner.level != null && !isIndependent ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 8 }}>
+                <div className="pcp-commission-card">
+                  <span className="pcp-commission-card-label">Cấp 1 — HĐ tự ký</span>
+                  <span className="pcp-commission-card-value">{commission.l1}%</span>
+                </div>
+                <div className="pcp-commission-card">
+                  <span className="pcp-commission-card-label">Cấp 2 — F1 ký</span>
+                  <span className="pcp-commission-card-value">{commission.l2}%</span>
+                </div>
+                <div className="pcp-commission-card">
+                  <span className="pcp-commission-card-label">Cấp 3 — Đội nhóm</span>
+                  <span className="pcp-commission-card-value">{commission.l3}%</span>
+                </div>
               </div>
-              <div className="pcp-commission-card">
-                <span className="pcp-commission-card-label">Cấp 2 — F1 ký</span>
-                <span className="pcp-commission-card-value">{commission.l2}%</span>
+            ) : (
+              <div style={{
+                marginTop: 8, padding: "12px 14px", borderRadius: 8,
+                background: "#fef3c7", border: "1px solid #fde68a",
+                color: "#92400e", fontSize: 13, lineHeight: 1.5,
+              }}>
+                💡 {isIndependent
+                  ? "Bạn là đối tác Tự do riêng lẻ — chỉ hưởng hoa hồng cá nhân theo từng hợp đồng đã ký, không tham gia tuyến hoa hồng cấp 1/2/3."
+                  : "Bạn chưa được phân nhánh trong hệ thống — chưa có cấp nên chưa áp dụng tỉ lệ hoa hồng cấp 1/2/3. Hãy gửi yêu cầu tham gia đội nhóm để được admin xếp nhánh."}
               </div>
-              <div className="pcp-commission-card">
-                <span className="pcp-commission-card-label">Cấp 3 — Đội nhóm</span>
-                <span className="pcp-commission-card-value">{commission.l3}%</span>
-              </div>
-            </div>
+            )}
 
             <p style={{ fontWeight: 700, color: "#0f172a", margin: "12px 0 4px" }}>Điều 4. Nghĩa vụ của Bên B</p>
             <ul style={{ margin: "4px 0 0 18px", padding: 0 }}>

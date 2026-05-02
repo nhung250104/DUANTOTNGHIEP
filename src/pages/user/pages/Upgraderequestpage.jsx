@@ -103,9 +103,13 @@ function Upgraderequestpage() {
     return { f1: f1Count, ok: okContracts, revenue };
   })();
 
-  const currentRank = partner?.rank || "Member";
-  const nextRank    = NEXT_RANK[currentRank] || null;
-  const isMaxRank   = currentRank === MAX_RANK || !nextRank;
+  const currentRank   = partner?.rank || "Member";
+  const nextRank      = NEXT_RANK[currentRank] || null;
+  const isMaxRank     = currentRank === MAX_RANK || !nextRank;
+  // Chưa có cấp (awaiting / INDEPENDENT) → không được nâng hạng.
+  const isIndependent = partner?.memberType === "INDEPENDENT";
+  const hasLevel      = partner?.level != null;
+  const noTreePos     = !!partner && (!hasLevel || isIndependent);
   const cfg = nextRank ? UPGRADE_CONDITIONS[currentRank] : null;
   const conditions = cfg
     ? [
@@ -123,6 +127,14 @@ function Upgraderequestpage() {
     if (!file)           { setError("Vui lòng upload hợp đồng đã ký."); return; }
     if (!partner)        { setError("Không tìm thấy hồ sơ đối tác."); return; }
 
+    if (noTreePos) {
+      setError(
+        isIndependent
+          ? "Bạn đang là đối tác Tự do riêng lẻ — không có cấp trong cây nên không thể nâng hạng. Hãy gửi yêu cầu tham gia đội nhóm trước."
+          : "Bạn chưa được admin phân nhánh trong cây — chưa có cấp nên chưa thể nâng hạng."
+      );
+      return;
+    }
     if (isMaxRank) {
       setError(`Bạn đã đạt hạng ${MAX_RANK} — hạng cao nhất.`);
       return;
@@ -274,7 +286,18 @@ function Upgraderequestpage() {
         <div className="urp-form-card">
           <h3 className="urp-card-title">Điều kiện nâng hạng</h3>
 
-          {isMaxRank ? (
+          {noTreePos ? (
+            <div style={{
+              border: "1px solid #fde68a",
+              background: "#fffbeb",
+              borderRadius: 10, padding: 14, marginBottom: 18,
+              fontSize: 13, color: "#92400e",
+            }}>
+              🚫 {isIndependent
+                ? <>Bạn là <strong>đối tác Tự do riêng lẻ</strong> — không có cấp trong cây nên không thể nâng hạng. Hãy gửi yêu cầu <strong>tham gia đội nhóm</strong> để được admin xếp nhánh trước.</>
+                : <>Bạn <strong>chưa được phân nhánh</strong> trong cây hệ thống — chưa có cấp nên chưa thể nâng hạng. Vui lòng đợi admin xếp nhánh hoặc liên hệ bộ phận hỗ trợ.</>}
+            </div>
+          ) : isMaxRank ? (
             <div style={{
               border: "1px solid #bfdbfe",
               background: "#eff6ff",
@@ -416,19 +439,22 @@ function Upgraderequestpage() {
             <button
               className="urp-btn-submit"
               type="submit"
-              disabled={submitting || !conditionsMet || isMaxRank}
+              disabled={submitting || !conditionsMet || isMaxRank || noTreePos}
               title={
+                noTreePos ? "Chưa có cấp trong cây — không thể nâng hạng" :
                 isMaxRank ? `Đã đạt hạng ${MAX_RANK} — hạng cao nhất` :
                 !conditionsMet ? "Bạn chưa đủ điều kiện nâng hạng" : ""
               }
             >
               {submitting
                 ? "Đang gửi..."
-                : isMaxRank
-                  ? `🏆 Đã đạt hạng ${MAX_RANK} — hạng cao nhất`
-                  : conditionsMet
-                    ? `✓ Gửi yêu cầu nâng hạng lên ${nextRank}`
-                    : "🔒 Chưa đủ điều kiện nâng hạng"}
+                : noTreePos
+                  ? "🚫 Chưa có cấp — không thể nâng hạng"
+                  : isMaxRank
+                    ? `🏆 Đã đạt hạng ${MAX_RANK} — hạng cao nhất`
+                    : conditionsMet
+                      ? `✓ Gửi yêu cầu nâng hạng lên ${nextRank}`
+                      : "🔒 Chưa đủ điều kiện nâng hạng"}
             </button>
           </form>
         </div>

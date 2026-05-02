@@ -75,6 +75,8 @@ function Partnercontractdetailpage() {
           const res     = await api.get(`/partners/${id}`);
           const partner = res.data;
           const comm    = getCommissionByRank(partner.rank);
+          const isIndependent = (partner.memberType || "").toUpperCase() === "INDEPENDENT";
+          const hasLevel      = partner.level != null;
 
           setRawPartner(partner);
           setContract({
@@ -89,8 +91,11 @@ function Partnercontractdetailpage() {
             signDate:        partner.joinDate,
             status:          partner.status === "approved" ? "approved" : "pending",
             contractFile:    partner.contractFile,
-            level:           partner.level ?? 0,
+            level:           partner.level,
             rank:            partner.rank || "Member",
+            // INDEPENDENT/awaiting (chưa có cấp): không hiển thị tỉ lệ HH theo cấp.
+            showTierRates:   !isIndependent && hasLevel,
+            isIndependent,
             commissionL1:    comm.l1,
             commissionL2:    comm.l2,
             commissionL3:    comm.l3,
@@ -108,6 +113,8 @@ function Partnercontractdetailpage() {
           // Hợp đồng nâng cấp: dùng newRank trên upgradeRequest (Member→Leader→Partner→Senior Partner).
           const newRank   = upgrade.newRank || partner?.rank || "Leader";
           const comm      = getCommissionByRank(newRank);
+          const isIndependent2 = (partner?.memberType || "").toUpperCase() === "INDEPENDENT";
+          const hasLevel2      = partner?.level != null;
 
           setRawPartner(partner);
           setContract({
@@ -124,8 +131,10 @@ function Partnercontractdetailpage() {
             signDate:        upgrade.approvedAt || upgrade.submittedAt,
             status:          "approved",
             contractFile:    upgrade.contractFile,
-            level:           partner?.level ?? 0,
+            level:           partner?.level,
             rank:            newRank,
+            showTierRates:   !isIndependent2 && hasLevel2,
+            isIndependent:   isIndependent2,
             commissionL1:    comm.l1,
             commissionL2:    comm.l2,
             commissionL3:    comm.l3,
@@ -220,13 +229,25 @@ function Partnercontractdetailpage() {
           <InfoItem label="Ngày tạo hợp đồng" value={contract.signDate} />
         </div>
 
-        {/* Row 2: Hoa hồng */}
+        {/* Row 2: Hoa hồng — INDEPENDENT/awaiting không có cấp nên không có % cấp 1/2/3 */}
         <div className="pc-detail-row">
-          <div className="pc-comm-row">
-            <CommCard label="Tỉ lệ hoa hồng cấp 1" value={contract.commissionL1} />
-            <CommCard label="Tỉ lệ hoa hồng cấp 2" value={contract.commissionL2} />
-            <CommCard label="Tỉ lệ hoa hồng cấp 3" value={contract.commissionL3} />
-          </div>
+          {contract.showTierRates ? (
+            <div className="pc-comm-row">
+              <CommCard label="Tỉ lệ hoa hồng cấp 1" value={contract.commissionL1} />
+              <CommCard label="Tỉ lệ hoa hồng cấp 2" value={contract.commissionL2} />
+              <CommCard label="Tỉ lệ hoa hồng cấp 3" value={contract.commissionL3} />
+            </div>
+          ) : (
+            <div style={{
+              padding: "12px 14px", borderRadius: 8,
+              background: "#fef3c7", border: "1px solid #fde68a",
+              color: "#92400e", fontSize: 13, lineHeight: 1.5,
+            }}>
+              💡 {contract.isIndependent
+                ? "Đối tác Tự do riêng lẻ chỉ hưởng hoa hồng cá nhân theo từng hợp đồng đã ký, không tham gia tuyến hoa hồng cấp 1/2/3."
+                : "Đối tác chưa được phân nhánh — chưa có cấp trong cây nên chưa áp dụng tỉ lệ hoa hồng cấp 1/2/3."}
+            </div>
+          )}
         </div>
 
         {/* Row 3: Tổng hoa hồng */}

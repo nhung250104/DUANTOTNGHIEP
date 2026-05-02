@@ -112,22 +112,42 @@ def main():
         p.pop("tierLabel", None)
 
     # Step 2: Recompute level = tree depth (0..3, cap 3)
+    #   - INDEPENDENT: KHÔNG có cấp (level=None) — đứng riêng, không trong cây.
+    #   - parentId=null + non-INDEPENDENT: cũng KHÔNG có cấp (đang chờ admin xếp nhánh).
+    #   - Có parentId: level = parent.level + 1 (cap 3).
     by_id = {str(p.get("id")): p for p in partners}
 
     def compute_depth(pid, seen=None):
         seen = seen or set()
         if pid in seen:
-            return 0  # cycle guard
+            return None  # cycle guard
         seen.add(pid)
         p = by_id.get(str(pid))
-        if not p or not p.get("parentId"):
-            return 0
-        return min(3, compute_depth(str(p["parentId"]), seen) + 1)
+        if not p:
+            return None
+        if not p.get("parentId"):
+            return None  # ROOT chưa được phân nhánh → chưa có cấp
+        parent_depth = compute_depth(str(p["parentId"]), seen)
+        if parent_depth is None:
+            return 1  # parent là root chưa có cấp → con tính 1 (parent ngầm = 0)
+        return min(3, parent_depth + 1)
 
     for p in partners:
+        if (p.get("memberType") or "").upper() == "INDEPENDENT":
+            p["level"]      = None
+            p["levelLabel"] = "Chưa có cấp"
+            continue
+        if not p.get("parentId"):
+            p["level"]      = None
+            p["levelLabel"] = "Chưa có cấp"
+            continue
         depth = compute_depth(str(p.get("id")))
-        p["level"]      = depth
-        p["levelLabel"] = f"Cấp {depth}"
+        if depth is None:
+            p["level"]      = None
+            p["levelLabel"] = "Chưa có cấp"
+        else:
+            p["level"]      = depth
+            p["levelLabel"] = f"Cấp {depth}"
 
     # 7. Migrate upgradeRequests: thêm currentRank/newRank cho entry chỉ có currentLevel.
     #    Lý do: spec mới — nâng cấp = nâng HẠNG (rank) chứ không phải level.
