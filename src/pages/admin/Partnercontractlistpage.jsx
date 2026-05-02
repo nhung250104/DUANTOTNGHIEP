@@ -296,6 +296,7 @@ function Partnercontractlistpage() {
                     <thead>
                       <tr>
                         <th>Mã HĐ</th>
+                        <th>Mã đối tác</th>
                         <th>Họ và tên</th>
                         <th>Ngày ký</th>
                         <th>Loại hợp đồng</th>
@@ -305,19 +306,22 @@ function Partnercontractlistpage() {
                     <tbody>
                       {pageData.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="pc-empty">
+                          <td colSpan={6} className="pc-empty">
                             Không có hợp đồng nào
                           </td>
                         </tr>
                       ) : pageData.map((c) => {
                         const cfg = STATUS_CFG[c.status] || STATUS_CFG.approved;
+                        // Mã HĐ đối tác: HDDT + 6 chữ số (lấy theo partnerId / contract id)
+                        const hddtCode = `HDDT${String(c.partnerId).padStart(6, "0")}`;
                         return (
                           <tr
                             key={c.id}
                             className="pc-row"
                             onClick={() => goDetail(c)}
                           >
-                            <td className="pc-code">{c.partnerCode}</td>
+                            <td className="pc-code">{hddtCode}</td>
+                            <td style={{ color: "#0d9488", fontWeight: 600 }}>{c.partnerCode}</td>
                             <td>{c.partnerName}</td>
                             <td>{c.signDate}</td>
                             <td>

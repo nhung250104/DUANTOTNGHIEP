@@ -591,6 +591,7 @@ function CustomerContractPage({ isAdmin = false }) {
                 <tr>
                   <th>Mã HĐ</th>
                   {isAdmin && <th>Đối tác</th>}
+                  <th>Mã đối tác</th>
                   <th>Khách hàng</th>
                   <th>Ngày ký</th>
                   <th>Ngày hết hạn</th>
@@ -602,7 +603,7 @@ function CustomerContractPage({ isAdmin = false }) {
               <tbody>
                 {pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 8 : 7} className="cc-empty">
+                    <td colSpan={isAdmin ? 9 : 8} className="cc-empty">
                       Không có hợp đồng nào
                     </td>
                   </tr>
@@ -628,6 +629,7 @@ function CustomerContractPage({ isAdmin = false }) {
                           </span>
                         </td>
                         {isAdmin && <td>{c.partnerName}</td>}
+                        <td style={{ color: "#0d9488", fontWeight: 600 }}>{c.partnerCode || "—"}</td>
                         <td>{c.customerName}</td>
                         <td>{c.signDate}</td>
                         <td>{c.expireDate}</td>
@@ -655,6 +657,7 @@ function CustomerContractPage({ isAdmin = false }) {
                 <tr>
                   <th>Mã HĐ</th>
                   {isAdmin && <th>Đối tác</th>}
+                  <th>Mã đối tác</th>
                   <th>Khách hàng</th>
                   <th>Ngày gửi</th>
                   <th>Giá trị</th>
@@ -665,7 +668,7 @@ function CustomerContractPage({ isAdmin = false }) {
               <tbody>
                 {pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 7 : 5} className="cc-empty">
+                    <td colSpan={isAdmin ? 8 : 6} className="cc-empty">
                       Không có hợp đồng chờ duyệt
                     </td>
                   </tr>
@@ -686,6 +689,7 @@ function CustomerContractPage({ isAdmin = false }) {
                         <span className="cc-code cc-code--active">{c.code}</span>
                       </td>
                       {isAdmin && <td>{c.partnerName}</td>}
+                      <td style={{ color: "#0d9488", fontWeight: 600 }}>{c.partnerCode || "—"}</td>
                       <td>{c.customerName}</td>
                       <td>{c.createdAt}</td>
                       <td><strong>{fmt(c.value)}</strong></td>
