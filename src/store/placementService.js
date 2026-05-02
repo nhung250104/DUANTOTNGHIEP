@@ -15,7 +15,8 @@
 
 import api from "./api";
 
-export const DEFAULT_MAX_F1 = 10;
+export const DEFAULT_MAX_F1   = 10;
+export const MAX_TREE_DEPTH   = 3;   // Cấp cao nhất trong cây — parent ở cấp 3 KHÔNG được nhận F1 mới.
 
 /* ─── Helpers (pure) ─────────────────────────────────────── */
 
@@ -57,11 +58,13 @@ export function pickPlacement(partners, target, maxPerNode = DEFAULT_MAX_F1) {
   const excluded = collectSubtreeIds(partners, target.id);
 
   // Active candidates: approved + tham gia hệ thống (NORMAL/PARTNER), không phải INDEPENDENT.
+  // KHÔNG nhận parent ở MAX_TREE_DEPTH (cấp 3) vì F1 của họ sẽ là cấp 4 (vượt trần).
   const candidates = partners
     .filter((p) =>
       p.status === "approved"
       && p.memberType !== "INDEPENDENT"
       && !excluded.has(String(p.id))
+      && (Number(p.level) || 0) < MAX_TREE_DEPTH
     )
     .map((p) => ({ p, f1: countF1(partners, p.id) }))
     .filter(({ f1 }) => f1 < maxPerNode)
@@ -91,17 +94,16 @@ export async function autoPlaceOne(target, maxPerNode = DEFAULT_MAX_F1) {
   if (fresh.status !== "approved")  return { ok: false, reason: "Đối tác chưa được duyệt" };
 
   const parent = pickPlacement(all, fresh, maxPerNode);
-  if (!parent) return { ok: false, reason: "Không tìm thấy cấp trên phù hợp (mọi node đã đầy hoặc rỗng hệ thống)" };
+  if (!parent) return { ok: false, reason: "Không tìm thấy cấp trên phù hợp (mọi node đã đầy, đã ở Cấp 3, hoặc hệ thống chưa có node)" };
 
-  const newLevel      = (Number(parent.level) || 0) + 1;
-  const newLevelLabel = newLevel <= 3 ? `Cấp ${newLevel}` : "Cấp .";
+  const newLevel = Math.min(MAX_TREE_DEPTH, (Number(parent.level) || 0) + 1);
   const updated = {
     ...fresh,
     parentId:     String(parent.id),
     referralCode: parent.code || null,
     memberType:   "NORMAL",
     level:        newLevel,
-    levelLabel:   newLevelLabel,
+    levelLabel:   `Cấp ${newLevel}`,
   };
   await api.put(`/partners/${fresh.id}`, updated);
 

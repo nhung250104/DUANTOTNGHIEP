@@ -212,12 +212,12 @@ function Partnerdetailpage({ userMode = false } = {}) {
         status:       "approved",
         contractFile: file.name,
         joinDate:     new Date().toLocaleDateString("vi-VN"),
-        // tier = hạng nâng cấp (1/2/3); level = độ sâu trong cây (root=0)
-        tier:         1,
-        tierLabel:    "Hạng 1",
-        level:        0,
-        levelLabel:   "Cấp 0",
-        parentId:     null,
+        // level = độ sâu trong cây (0..3, 0 = chưa có cha); rank = hạng KPI (Member..Senior Partner)
+        level:        partner.parentId ? (partner.level ?? 0) : 0,
+        levelLabel:   `Cấp ${partner.parentId ? (partner.level ?? 0) : 0}`,
+        rank:         partner.rank || "Member",
+        rankLabel:    partner.rank || "Member",
+        parentId:     partner.parentId || null,
       };
       await partnerService.update(id, updated);
       setPartner(updated);
@@ -358,7 +358,8 @@ function Partnerdetailpage({ userMode = false } = {}) {
                 <SectionTitle>Thông tin công việc</SectionTitle>
                 <div className="pd-grid">
                   <Field label="Mã đối tác"            value={p.code}              />
-                  <Field label="Cấp"                   value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
+                  <Field label="Cấp (vị trí trong cây)" value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
+                  <Field label="Hạng (KPI)"            value={p.rank || p.rankLabel || "Member"} teal />
                   <Field label="Quản lý bởi"           value={p.managedBy}         />
                   <Field label="Ngân hàng"             value={p.bank}              />
                   <Field label="Số tài khoản"          value={p.bankAccount}       />

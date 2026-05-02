@@ -8,16 +8,16 @@ const fmt    = (n) => new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
 const fmtPct = (n) => `${n || 0}%`;
 const PAGE_SIZE = 5;
 
-// Hoa hồng theo CẤP (level 0..3). 0 = cao nhất.
+// Hoa hồng theo HẠNG (rank). KHÔNG phụ thuộc level (cấp trong cây).
 const DEFAULT_RATES = {
-  0: { l1: 35, l2: 18, l3: 10 },
-  1: { l1: 30, l2: 15, l3: 7  },
-  2: { l1: 25, l2: 12, l3: 5  },
-  3: { l1: 20, l2: 10, l3: 3  },
+  "Member":         { l1: 20, l2: 10, l3: 3  },
+  "Leader":         { l1: 25, l2: 12, l3: 5  },
+  "Partner":        { l1: 30, l2: 15, l3: 7  },
+  "Senior Partner": { l1: 35, l2: 18, l3: 10 },
 };
 const getCommRate = (partner) => {
   if (partner?.commissionRates) return partner.commissionRates;
-  return DEFAULT_RATES[partner?.level] || DEFAULT_RATES[3];
+  return DEFAULT_RATES[partner?.rank] || DEFAULT_RATES["Member"];
 };
 
 function MiniPager({ total, page, onPage }) {

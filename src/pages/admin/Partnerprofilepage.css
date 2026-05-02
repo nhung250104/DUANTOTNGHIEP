@@ -248,6 +248,23 @@
 .pp-level-badge--2 { background: #d1fae5; color: #065f46; }
 .pp-level-badge--3 { background: #fef3c7; color: #92400e; }
 
+/* ── Rank badges ── */
+.pp-rank-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.pp-rank-badge--next {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
 /* ── Status badges ── */
 .pp-status-badge {
   display: inline-block;

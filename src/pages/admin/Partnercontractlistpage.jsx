@@ -56,22 +56,22 @@ const buildContractList = (partners, upgradeRequests) => {
       });
     });
 
-  // 2. HĐ nâng cấp (từ upgradeRequests approved)
+  // 2. HĐ nâng hạng (từ upgradeRequests approved). Nâng HẠNG, KHÔNG đổi cấp trong cây.
   upgradeRequests
     .filter((r) => r.status === "approved")
     .forEach((r) => {
-      const nextLevel = (r.currentLevel || 1) + 1;
+      const newRank = r.newRank || "Leader";
       list.push({
         id:           `upgrade-${r.id}`,
         upgradeId:    r.id,
         partnerId:    r.partnerId,
         partnerCode:  r.partnerCode || `${String(r.partnerId).padStart(6, "0")}`,
         partnerName:  r.partnerName,
-        contractType: `Đăng ký làm đối tác cấp ${nextLevel}`,
+        contractType: `Nâng hạng lên ${newRank}`,
         signDate:     r.approvedAt || r.submittedAt || "—",
         status:       "approved",
         contractFile: r.contractFile || null,
-        level:        nextLevel,
+        rank:         newRank,
         source:       "upgrade",
         // Data đầy đủ cho detail page
         _upgrade:     r,

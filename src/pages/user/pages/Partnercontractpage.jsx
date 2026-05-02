@@ -41,16 +41,16 @@ const extractCode = (input = "") => {
   return t;
 };
 
-// Hoa hồng theo CẤP (level 0..3). 0 = cao nhất.
+// Hoa hồng theo HẠNG (rank). KHÔNG dựa vào cấp trong cây (level).
 const DEFAULT_RATES = {
-  0: { l1: 35, l2: 18, l3: 10 },
-  1: { l1: 30, l2: 15, l3: 7  },
-  2: { l1: 25, l2: 12, l3: 5  },
-  3: { l1: 20, l2: 10, l3: 3  },
+  "Member":         { l1: 20, l2: 10, l3: 3  },
+  "Leader":         { l1: 25, l2: 12, l3: 5  },
+  "Partner":        { l1: 30, l2: 15, l3: 7  },
+  "Senior Partner": { l1: 35, l2: 18, l3: 10 },
 };
 const getCommissionRates = (partner) => {
   if (partner?.commissionRates) return partner.commissionRates;
-  return DEFAULT_RATES[partner?.level] || DEFAULT_RATES[3];
+  return DEFAULT_RATES[partner?.rank] || DEFAULT_RATES["Member"];
 };
 
 /* ─── Modal: Yêu cầu tham gia đội nhóm (cho INDEPENDENT) ─── */
@@ -289,7 +289,8 @@ function Partnercontractpage() {
 
   const commission   = getCommissionRates(partner);
   const contractCode = `HDDT${String(partner.id).padStart(6, "0")}`;
-  const canUpgrade   = (partner.level ?? 3) > 0;
+  // Có thể nâng hạng nếu rank chưa phải Senior Partner.
+  const canUpgrade    = (partner.rank || "Member") !== "Senior Partner";
   const isIndependent = partner.memberType === "INDEPENDENT";
 
   // Stats: HĐ KH approved + doanh thu
@@ -487,7 +488,7 @@ function Partnercontractpage() {
               <li>Thông tin cá nhân và giấy tờ tùy thân tôi cung cấp là chính xác và hợp pháp.</li>
               <li>Tuân thủ đầy đủ các điều khoản tại Điều 4 của hợp đồng này.</li>
               <li>Chịu trách nhiệm về mọi giao dịch phát sinh dưới mã đối tác của tôi.</li>
-              <li>Đồng ý với chính sách hoa hồng và quy định nâng cấp đối tác của hệ thống SIVIP.</li>
+              <li>Đồng ý với chính sách hoa hồng và quy định nâng hạng đối tác của hệ thống SIVIP.</li>
             </ul>
           </div>
         </div>
@@ -516,7 +517,7 @@ function Partnercontractpage() {
               </button>
             ) : canUpgrade && (
               <button className="pcp-btn-upgrade" onClick={() => navigate("/upgrade-requests")}>
-                ⬆ Yêu cầu nâng cấp đối tác
+                ⬆ Yêu cầu nâng hạng đối tác
               </button>
             )}
           </div>

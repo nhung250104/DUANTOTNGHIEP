@@ -171,8 +171,8 @@
       "status": "approved",
       "joinDate": "01/01/2025",
       "parentId": null,
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 0,
+      "levelLabel": "Cấp 0",
       "contracts": 10,
       "commission": 125000000,
       "refLink": "sivip.vn/ref/000001",
@@ -189,7 +189,9 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL"
+      "memberType": "NORMAL",
+      "rank": "Member",
+      "rankLabel": "Member"
     },
     {
       "id": "2",
@@ -202,8 +204,8 @@
       "status": "approved",
       "joinDate": "15/02/2025",
       "parentId": null,
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 0,
+      "levelLabel": "Cấp 0",
       "contracts": 8,
       "commission": 90000000,
       "refLink": "sivip.vn/ref/000002",
@@ -220,7 +222,9 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL"
+      "memberType": "NORMAL",
+      "rank": "Member",
+      "rankLabel": "Member"
     },
     {
       "id": "3",
@@ -233,8 +237,8 @@
       "status": "approved",
       "joinDate": "20/03/2025",
       "parentId": null,
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 0,
+      "levelLabel": "Cấp 0",
       "contracts": 5,
       "commission": 60000000,
       "refLink": "sivip.vn/ref/000003",
@@ -251,7 +255,9 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL"
+      "memberType": "NORMAL",
+      "rank": "Member",
+      "rankLabel": "Member"
     },
     {
       "id": "4",
@@ -264,8 +270,8 @@
       "status": "approved",
       "joinDate": "10/04/2025",
       "parentId": null,
-      "level": 1,
-      "levelLabel": "Cấp 1",
+      "level": 0,
+      "levelLabel": "Cấp 0",
       "contracts": 4,
       "commission": 37550000,
       "refLink": "sivip.vn/ref/000004",
@@ -282,7 +288,9 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "PARTNER"
+      "memberType": "PARTNER",
+      "rank": "Partner",
+      "rankLabel": "Partner"
     },
     {
       "id": "5",
@@ -295,8 +303,8 @@
       "status": "approved",
       "joinDate": "05/05/2025",
       "parentId": null,
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 0,
+      "levelLabel": "Cấp 0",
       "contracts": 4,
       "commission": 48000000,
       "refLink": "sivip.vn/ref/000005",
@@ -313,7 +321,9 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL"
+      "memberType": "NORMAL",
+      "rank": "Member",
+      "rankLabel": "Member"
     },
     {
       "id": "6",
@@ -326,8 +336,8 @@
       "status": "approved",
       "joinDate": "20/05/2025",
       "parentId": null,
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 0,
+      "levelLabel": "Cấp 0",
       "contracts": 2,
       "commission": 22000000,
       "refLink": "sivip.vn/ref/000006",
@@ -344,7 +354,9 @@
       "cccdFront": null,
       "cccdBack": null,
       "transferStatus": null,
-      "memberType": "NORMAL"
+      "memberType": "NORMAL",
+      "rank": "Member",
+      "rankLabel": "Member"
     },
     {
       "id": "7",
@@ -367,8 +379,8 @@
       "userId": "8",
       "parentId": "4",
       "referralCode": null,
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 1,
+      "levelLabel": "Cấp 1",
       "contracts": 0,
       "commission": 0,
       "refLink": "sivip.vn/ref/000007",
@@ -377,7 +389,9 @@
       "bankAccount": null,
       "managedBy": null,
       "transferStatus": null,
-      "memberType": "NORMAL"
+      "memberType": "NORMAL",
+      "rank": "Member",
+      "rankLabel": "Member"
     },
     {
       "id": "8",
@@ -400,8 +414,8 @@
       "userId": "9",
       "parentId": "4",
       "referralCode": "000004",
-      "level": 2,
-      "levelLabel": "Cấp 2",
+      "level": 1,
+      "levelLabel": "Cấp 1",
       "contracts": 1,
       "commission": 1750000,
       "refLink": "sivip.vn/ref/000008",
@@ -410,7 +424,9 @@
       "bankAccount": null,
       "managedBy": null,
       "transferStatus": null,
-      "memberType": "PARTNER"
+      "memberType": "PARTNER",
+      "rank": "Leader",
+      "rankLabel": "Leader"
     },
     {
       "id": "9",
@@ -433,8 +449,8 @@
       "userId": "10",
       "parentId": "8",
       "referralCode": "000008",
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 2,
+      "levelLabel": "Cấp 2",
       "contracts": 0,
       "commission": 0,
       "refLink": "sivip.vn/ref/000009",
@@ -443,7 +459,9 @@
       "bankAccount": null,
       "managedBy": null,
       "transferStatus": null,
-      "memberType": "NORMAL"
+      "memberType": "NORMAL",
+      "rank": "Member",
+      "rankLabel": "Member"
     },
     {
       "id": "10",
@@ -467,8 +485,8 @@
       "parentId": null,
       "referralCode": null,
       "memberType": "INDEPENDENT",
-      "level": 3,
-      "levelLabel": "Cấp 3",
+      "level": 0,
+      "levelLabel": "Cấp 0",
       "contracts": 0,
       "commission": 0,
       "refLink": "sivip.vn/ref/000010",
@@ -476,7 +494,9 @@
       "bank": null,
       "bankAccount": null,
       "managedBy": null,
-      "transferStatus": null
+      "transferStatus": null,
+      "rank": "Member",
+      "rankLabel": "Member"
     }
   ],
   "upgradeRequests": [
@@ -490,7 +510,9 @@
       "contractFile": "Thương-mại.docx",
       "status": "approved",
       "submittedAt": "07/04/2026",
-      "approvedAt": "7/4/2026"
+      "approvedAt": "7/4/2026",
+      "currentRank": "Partner",
+      "newRank": "Senior Partner"
     },
     {
       "id": "2",
@@ -502,7 +524,9 @@
       "contractFile": "BTL Project.docx",
       "status": "rejected",
       "submittedAt": "07/04/2026",
-      "rejectedAt": "9/4/2026"
+      "rejectedAt": "9/4/2026",
+      "currentRank": "Partner",
+      "newRank": "Senior Partner"
     },
     {
       "id": "3",
@@ -514,7 +538,9 @@
       "contractFile": "thu_trao_doi_lo_trinh_luong.docx",
       "status": "approved",
       "submittedAt": "09/04/2026",
-      "approvedAt": "9/4/2026"
+      "approvedAt": "9/4/2026",
+      "currentRank": "Leader",
+      "newRank": "Partner"
     },
     {
       "id": "4",
@@ -526,7 +552,9 @@
       "contractFile": "Ho-Thi-Cam-Hong.docx",
       "status": "approved",
       "submittedAt": "09/04/2026",
-      "approvedAt": "9/4/2026"
+      "approvedAt": "9/4/2026",
+      "currentRank": "Partner",
+      "newRank": "Senior Partner"
     }
   ],
   "notifications": [

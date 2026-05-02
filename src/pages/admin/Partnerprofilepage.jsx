@@ -44,7 +44,8 @@ function UpgradeApproveModal({ req, onClose, onSubmit }) {
     setLoading(false);
   };
 
-  const nextLevel = (req.currentLevel || 1) + 1;
+  const fromRank = req.currentRank || "Member";
+  const toRank   = req.newRank     || "Leader";
 
   return (
     <div className="pp-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -52,9 +53,9 @@ function UpgradeApproveModal({ req, onClose, onSubmit }) {
         <div className="pp-modal-header pp-modal-header--approve">
           <span className="pp-modal-icon">✓</span>
           <div>
-            <h3 className="pp-modal-title">Duyệt nâng cấp lên Cấp {nextLevel}</h3>
+            <h3 className="pp-modal-title">Duyệt nâng hạng lên {toRank}</h3>
             <p className="pp-modal-sub">
-              Nâng cấp <strong>{req.partnerName}</strong> từ Cấp {req.currentLevel || 1} lên Cấp {nextLevel}
+              Nâng hạng <strong>{req.partnerName}</strong> từ {fromRank} lên {toRank}
             </p>
           </div>
         </div>
@@ -139,6 +140,7 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
               <th>Số điện thoại</th>
               <th>Địa chỉ</th>
               <th>Cấp</th>
+              <th>Hạng</th>
               <th>Diện</th>
               {extraColumns.map((c) => <th key={c.key}>{c.label}</th>)}
             </tr>
@@ -146,7 +148,7 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
           <tbody>
             {pageData.length === 0 ? (
               <tr>
-                <td colSpan={7 + extraColumns.length} className="pp-empty">
+                <td colSpan={8 + extraColumns.length} className="pp-empty">
                   Không có dữ liệu
                 </td>
               </tr>
@@ -165,6 +167,14 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
                       background: "#e0f2fe", color: "#075985", fontSize: 11, fontWeight: 600,
                     }}>
                       {row.levelLabel || (row.level != null ? `Cấp ${row.level}` : "—")}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      display: "inline-block", padding: "2px 8px", borderRadius: 6,
+                      background: "#fef3c7", color: "#92400e", fontSize: 11, fontWeight: 600,
+                    }}>
+                      {row.rank || row.rankLabel || "Member"}
                     </span>
                   </td>
                   <td>
@@ -256,13 +266,17 @@ function Partnerprofilepage() {
       const approvedDate = new Date().toLocaleDateString("vi-VN");
 
       // 1. Cập nhật partner → approved
-      //    - level = 3 (mới đăng ký = thấp nhất). Admin nâng cấp sau sẽ giảm dần xuống 0.
+      //    - level: tree depth (0 nếu chưa có parent; auto-place hoặc gán nhánh sẽ tính lại)
+      //    - rank:  hạng KPI; mặc định "Member" cho hồ sơ mới
       //    - refLink: cấp nào cũng có link giới thiệu
+      const newLevel = partner.parentId ? (partner.level ?? 0) : 0;
       await partnerService.update(partner.id, {
         ...partner,
         status:     "approved",
-        level:      3,
-        levelLabel: "Cấp 3",
+        level:      newLevel,
+        levelLabel: `Cấp ${newLevel}`,
+        rank:       partner.rank || "Member",
+        rankLabel:  partner.rank || "Member",
         joinDate:   approvedDate,
         refLink:    partner.refLink || `sivip.vn/ref/${partner.code}`,
       });
@@ -420,16 +434,20 @@ function Partnerprofilepage() {
   ───────────────────────────────────────────────────────── */
   const handleApproveUpgrade = async (req, file) => {
     try {
-      // Direction mới: nâng cấp = level GIẢM (3→2→1→0). 0 = max.
-      const oldLevel    = req.currentLevel ?? 3;
-      const newLevel    = Math.max(0, oldLevel - 1);
+      // Nâng HẠNG (rank): Member → Leader → Partner → Senior Partner. KHÔNG đụng level (cấp trong cây).
       const partnerRes  = await partnerService.getById(req.partnerId);
       const partner     = Array.isArray(partnerRes.data) ? partnerRes.data[0] : partnerRes.data;
+      const oldRank     = req.currentRank || partner?.rank || "Member";
+      const newRank     = req.newRank     || ({
+        "Member":  "Leader",
+        "Leader":  "Partner",
+        "Partner": "Senior Partner",
+      }[oldRank] || oldRank);
 
       await partnerService.update(req.partnerId, {
         ...partner,
-        level:        newLevel,
-        levelLabel:   `Cấp ${newLevel}`,
+        rank:         newRank,
+        rankLabel:    newRank,
         contractFile: file.name,
         refLink:      partner.refLink || `sivip.vn/ref/${partner.code}`,
       });
@@ -447,8 +465,8 @@ function Partnerprofilepage() {
           id:         String(phId + 1),
           partnerId:  String(req.partnerId),
           partnerName: req.partnerName,
-          oldLevel:   oldLevel,
-          newLevel:   newLevel,
+          oldRank:    oldRank,
+          newRank:    newRank,
           approvedBy: currentUser?.name || "admin",
           reason:     req.reason || "",
           createdAt:  new Date().toLocaleDateString("vi-VN"),
@@ -461,7 +479,7 @@ function Partnerprofilepage() {
           actorName:  currentUser?.name || "admin",
           targetId:   String(req.partnerId),
           targetType: "partner",
-          description: `Nâng cấp ${req.partnerName} từ Cấp ${oldLevel} lên Cấp ${newLevel}`,
+          description: `Nâng hạng ${req.partnerName} từ ${oldRank} lên ${newRank}`,
           createdAt:  new Date().toLocaleDateString("vi-VN"),
         });
       } catch (e) {
@@ -474,8 +492,8 @@ function Partnerprofilepage() {
           recipientType:   "user",
           recipientUserId: partner.userId,
           type:            "upgrade_approved",
-          title:           `Bạn đã được nâng lên Cấp ${newLevel}`,
-          message:         `Yêu cầu nâng cấp của bạn đã được duyệt. Tỉ lệ hoa hồng và quyền lợi mới sẽ áp dụng từ hôm nay.`,
+          title:           `Bạn đã được nâng hạng lên ${newRank}`,
+          message:         `Yêu cầu nâng hạng của bạn đã được duyệt. Tỉ lệ hoa hồng và quyền lợi mới sẽ áp dụng từ hôm nay.`,
           link:            "/my-promotion",
           partnerId:       req.partnerId,
           partnerName:     req.partnerName,
@@ -490,14 +508,14 @@ function Partnerprofilepage() {
       setPartners((prev) =>
         prev.map((p) =>
           p.id === req.partnerId
-            ? { ...p, level: newLevel, levelLabel: `Cấp ${newLevel}` }
+            ? { ...p, rank: newRank, rankLabel: newRank }
             : p
         )
       );
       setApproveModal(null);
-      alert(`✅ Đã nâng cấp ${req.partnerName} lên Cấp ${newLevel} thành công!`);
+      alert(`✅ Đã nâng hạng ${req.partnerName} lên ${newRank} thành công!`);
     } catch {
-      alert("Duyệt nâng cấp thất bại.");
+      alert("Duyệt nâng hạng thất bại.");
     }
   };
 
@@ -516,12 +534,13 @@ function Partnerprofilepage() {
         const pRes = await partnerService.getById(req.partnerId);
         const partner = Array.isArray(pRes.data) ? pRes.data[0] : pRes.data;
         if (partner?.userId) {
+          const targetRank = req.newRank || "(hạng kế tiếp)";
           await notify({
             recipientType:   "user",
             recipientUserId: partner.userId,
             type:            "upgrade_rejected",
-            title:           "Yêu cầu nâng cấp bị từ chối",
-            message:         `Yêu cầu nâng cấp lên Cấp ${(req.currentLevel || 1) + 1} của bạn đã bị từ chối. Vui lòng liên hệ admin để biết lý do.`,
+            title:           "Yêu cầu nâng hạng bị từ chối",
+            message:         `Yêu cầu nâng hạng lên ${targetRank} của bạn đã bị từ chối. Vui lòng liên hệ admin để biết lý do.`,
             link:            "/upgrade-requests",
             partnerId:       req.partnerId,
             partnerName:     req.partnerName,
@@ -638,7 +657,7 @@ function Partnerprofilepage() {
               className={`pp-tab ${tab === "upgrade" ? "pp-tab--active" : ""}`}
               onClick={() => setTab("upgrade")}
             >
-              Yêu cầu nâng cấp đối tác{" "}
+              Yêu cầu nâng hạng đối tác{" "}
               <span className={`pp-tab-count ${pendingUpgrades.length > 0 ? "pp-tab-count--pending" : ""}`}>
                 {pendingUpgrades.length}
               </span>
@@ -783,7 +802,7 @@ function Partnerprofilepage() {
             />
           )}
 
-          {/* ── Tab: Yêu cầu nâng cấp ── */}
+          {/* ── Tab: Yêu cầu nâng hạng ── */}
           {tab === "upgrade" && (
             <div className="pp-table-wrap">
               <table className="pp-table">
@@ -792,7 +811,7 @@ function Partnerprofilepage() {
                     <th>STT</th>
                     <th>Mã đối tác</th>
                     <th>Họ và tên</th>
-                    <th>Cấp hiện tại</th>
+                    <th>Hạng hiện tại</th>
                     <th>Yêu cầu lên</th>
                     <th>Ngày gửi</th>
                     <th>Trạng thái</th>
@@ -803,11 +822,16 @@ function Partnerprofilepage() {
                   {upgradeRequests.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="pp-empty">
-                        Không có yêu cầu nâng cấp nào
+                        Không có yêu cầu nâng hạng nào
                       </td>
                     </tr>
                   ) : upgradeRequests.map((req, idx) => {
-                    const nextLevel = (req.currentLevel || 1) + 1;
+                    const fromRank = req.currentRank || "Member";
+                    const toRank   = req.newRank || ({
+                      "Member":  "Leader",
+                      "Leader":  "Partner",
+                      "Partner": "Senior Partner",
+                    }[fromRank] || fromRank);
                     return (
                       <tr
                         key={req.id}
@@ -818,14 +842,10 @@ function Partnerprofilepage() {
                         <td>{req.partnerCode}</td>
                         <td>{req.partnerName}</td>
                         <td>
-                          <span className={`pp-level-badge pp-level-badge--${req.currentLevel || 1}`}>
-                            Cấp {req.currentLevel || 1}
-                          </span>
+                          <span className="pp-rank-badge">{fromRank}</span>
                         </td>
                         <td>
-                          <span className={`pp-level-badge pp-level-badge--${nextLevel}`}>
-                            Cấp {nextLevel}
-                          </span>
+                          <span className="pp-rank-badge pp-rank-badge--next">{toRank}</span>
                         </td>
                         <td>{req.submittedAt || "—"}</td>
                         <td>

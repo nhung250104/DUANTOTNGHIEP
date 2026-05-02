@@ -22,19 +22,21 @@ const getNow = () => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
-/* ─── Điều kiện nâng cấp theo CẤP (level 0..3, 0 = cao nhất, 3 = mới đăng ký) ──── */
-/* Direction: nâng cấp = level GIẢM. Cấp 3 → 2 → 1 → 0 (= max). */
-const UPGRADE_CONDITIONS = {
-  // Cấp hiện tại 3 → 2 (lần nâng đầu tiên)
-  3: { minF1: 5,  minContracts: 10, minRevenue: 300_000_000 },
-  // Cấp 2 → 1
-  2: { minF1: 10, minContracts: 25, minRevenue: 700_000_000 },
-  // Cấp 1 → 0 (top)
-  1: { minF1: 20, minContracts: 50, minRevenue: 1_500_000_000 },
-  // Cấp 0 = trần (không nâng được nữa)
+/* ─── Lộ trình nâng HẠNG (rank) — KPI-based ────────────────────────────────
+   Member → Leader → Partner → Senior Partner (cao nhất, không nâng được nữa).
+   Nâng hạng KHÔNG đổi cấp trong cây (level), chỉ tăng tỉ lệ hoa hồng. */
+const RANK_ORDER = ["Member", "Leader", "Partner", "Senior Partner"];
+const NEXT_RANK  = {
+  "Member":  "Leader",
+  "Leader":  "Partner",
+  "Partner": "Senior Partner",
 };
-const MAX_LEVEL = 0;     // cấp tối đa (số NHỎ NHẤT vì 0 = cao nhất)
-const NEWBIE_LEVEL = 3;  // cấp khi mới đăng ký
+const UPGRADE_CONDITIONS = {
+  "Member":  { minF1: 5,  minContracts: 10, minRevenue: 300_000_000 },
+  "Leader":  { minF1: 10, minContracts: 25, minRevenue: 700_000_000 },
+  "Partner": { minF1: 20, minContracts: 50, minRevenue: 1_500_000_000 },
+};
+const MAX_RANK = "Senior Partner";
 
 /* ─── Component ────────────────────────────────────────── */
 function Upgraderequestpage() {
@@ -101,8 +103,10 @@ function Upgraderequestpage() {
     return { f1: f1Count, ok: okContracts, revenue };
   })();
 
-  const currentLevelEarly = partner?.level ?? NEWBIE_LEVEL;
-  const cfg = UPGRADE_CONDITIONS[currentLevelEarly]; // undefined nếu đã max (level 0)
+  const currentRank = partner?.rank || "Member";
+  const nextRank    = NEXT_RANK[currentRank] || null;
+  const isMaxRank   = currentRank === MAX_RANK || !nextRank;
+  const cfg = nextRank ? UPGRADE_CONDITIONS[currentRank] : null;
   const conditions = cfg
     ? [
         { key: "f1",      label: "Số F1 trực tiếp (đã duyệt)", current: stats.f1,      target: cfg.minF1 },
@@ -111,23 +115,20 @@ function Upgraderequestpage() {
       ]
     : [];
   const conditionsMet = conditions.length > 0 && conditions.every((c) => c.current >= c.target);
-  const isMaxLevel    = currentLevelEarly <= MAX_LEVEL;  // ≤ 0 → đã max
 
   const onSubmit = async (e) => {
     e.preventDefault();
 
-    if (!reason.trim()) { setError("Vui lòng nhập lý do yêu cầu nâng cấp."); return; }
+    if (!reason.trim()) { setError("Vui lòng nhập lý do yêu cầu nâng hạng."); return; }
     if (!file)           { setError("Vui lòng upload hợp đồng đã ký."); return; }
     if (!partner)        { setError("Không tìm thấy hồ sơ đối tác."); return; }
 
-    // Cấp 0 = trần. Nâng cấp = level giảm (3→2→1→0).
-    const currentLevel = partner.level ?? NEWBIE_LEVEL;
-    if (currentLevel <= MAX_LEVEL) {
-      setError(`Bạn đã đạt Cấp ${MAX_LEVEL} — cấp cao nhất. Quyền lợi: hưởng nhiều hoa hồng hơn từ tuyến dưới.`);
+    if (isMaxRank) {
+      setError(`Bạn đã đạt hạng ${MAX_RANK} — hạng cao nhất.`);
       return;
     }
     if (!conditionsMet) {
-      setError("Bạn chưa đủ điều kiện nâng cấp. Vui lòng xem chi tiết bên dưới.");
+      setError("Bạn chưa đủ điều kiện nâng hạng. Vui lòng xem chi tiết bên dưới.");
       return;
     }
 
@@ -135,15 +136,15 @@ function Upgraderequestpage() {
     setSubmitting(true);
 
     try {
-      /* 1. Tạo yêu cầu nâng cấp */
+      /* 1. Tạo yêu cầu nâng hạng */
       const maxId  = await getMaxId("upgradeRequests");
       const newReq = {
         id:           String(maxId + 1),
         partnerId:    partner.id,
         partnerCode:  partner.code,
         partnerName:  partner.name,
-        // Schema mới: currentLevel = cấp hiện tại (0..3). Sau duyệt level giảm 1.
-        currentLevel: currentLevel,
+        currentRank:  currentRank,
+        newRank:      nextRank,
         reason:       reason,
         contractFile: file.name,
         status:       "pending",
@@ -156,8 +157,8 @@ function Upgraderequestpage() {
       await api.post("/notifications", {
         id:          String(maxNotiId + 1),
         type:        "upgrade_request",
-        title:       "Yêu cầu nâng cấp đối tác",
-        message:     `${partner.name} (${partner.code}) yêu cầu nâng cấp từ Cấp ${currentLevel} lên Cấp ${currentLevel - 1}.`,
+        title:       "Yêu cầu nâng hạng đối tác",
+        message:     `${partner.name} (${partner.code}) yêu cầu nâng hạng từ ${currentRank} lên ${nextRank}.`,
         partnerId:   partner.id,
         partnerName: partner.name,
         read:        false,
@@ -186,15 +187,12 @@ function Upgraderequestpage() {
       <div className="urp-success-card">
         <div className="urp-success-icon">✅</div>
         <h2>Gửi yêu cầu thành công!</h2>
-        <p>Yêu cầu nâng cấp lên <strong>Cấp {Math.max(MAX_LEVEL, (partner?.level ?? NEWBIE_LEVEL) - 1)}</strong> của bạn đã được gửi đến admin.</p>
+        <p>Yêu cầu nâng hạng lên <strong>{nextRank}</strong> của bạn đã được gửi đến admin.</p>
         <p className="urp-success-sub">Chúng tôi sẽ xem xét và phản hồi trong vòng <strong>1-3 ngày làm việc</strong>.</p>
         <BackButton to="/dashboard" label="Quay lại trang chủ" />
       </div>
     </div>
   );
-
-  const currentLevelShown = partner?.level ?? NEWBIE_LEVEL;
-  const nextLevel        = Math.max(MAX_LEVEL, currentLevelShown - 1);
 
   return (
     <div className="urp-page">
@@ -202,8 +200,10 @@ function Upgraderequestpage() {
       <div className="page-header">
         <div className="page-header-left">
           <BackButton />
-          <h1 style={{ marginTop: 8 }}>Yêu cầu nâng cấp đối tác</h1>
-          <p>Gửi yêu cầu nâng cấp từ Cấp {currentLevelShown} lên Cấp {nextLevel}</p>
+          <h1 style={{ marginTop: 8 }}>Yêu cầu nâng hạng đối tác</h1>
+          <p>{isMaxRank
+            ? `Bạn đang ở hạng ${currentRank} — hạng cao nhất`
+            : `Gửi yêu cầu nâng hạng từ ${currentRank} lên ${nextRank}`}</p>
         </div>
         <button
           onClick={() => navigate("/my-promotion")}
@@ -215,7 +215,7 @@ function Upgraderequestpage() {
             cursor: "pointer", alignSelf: "flex-end",
           }}
         >
-          📜 Xem lịch sử nâng cấp
+          📜 Xem lịch sử nâng hạng
         </button>
       </div>
 
@@ -231,14 +231,19 @@ function Upgraderequestpage() {
           <p className="urp-partner-name">{partner?.name}</p>
 
           <div className="urp-level-row">
-            <span className="urp-level-badge urp-level-badge--current">Cấp {currentLevelShown}</span>
-            <span className="urp-arrow">→</span>
-            <span className="urp-level-badge urp-level-badge--next">Cấp {nextLevel}</span>
+            <span className="urp-level-badge urp-level-badge--current">{currentRank}</span>
+            {!isMaxRank && (
+              <>
+                <span className="urp-arrow">→</span>
+                <span className="urp-level-badge urp-level-badge--next">{nextRank}</span>
+              </>
+            )}
           </div>
 
           <div className="urp-info-list">
             {[
               { label: "Mã đối tác",  value: partner?.code },
+              { label: "Cấp trong cây", value: partner?.levelLabel || `Cấp ${partner?.level ?? 0}` },
               { label: "Email",       value: partner?.email },
               { label: "Điện thoại",  value: partner?.phone },
               { label: "Địa chỉ",    value: partner?.address },
@@ -251,34 +256,36 @@ function Upgraderequestpage() {
             ))}
           </div>
 
-          {/* Quyền lợi khi lên cấp */}
-          <div className="urp-benefits">
-            <p className="urp-benefits-title">🎁 Quyền lợi khi lên Cấp {nextLevel}</p>
-            <ul>
-              <li>Nhận link giới thiệu riêng</li>
-              <li>Hưởng hoa hồng gián tiếp từ Cấp 1</li>
-              <li>Hỗ trợ đào tạo nâng cao</li>
-              <li>Báo cáo doanh số chi tiết</li>
-            </ul>
-          </div>
+          {/* Quyền lợi khi nâng hạng */}
+          {!isMaxRank && (
+            <div className="urp-benefits">
+              <p className="urp-benefits-title">🎁 Quyền lợi khi lên {nextRank}</p>
+              <ul>
+                <li>Tỉ lệ hoa hồng cá nhân cao hơn</li>
+                <li>Hưởng % hoa hồng tuyến dưới (F2/F3) lớn hơn</li>
+                <li>Hỗ trợ đào tạo nâng cao</li>
+                <li>Báo cáo doanh số chi tiết</li>
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* ── Cột phải: form gửi yêu cầu ── */}
         <div className="urp-form-card">
-          <h3 className="urp-card-title">Điều kiện nâng cấp</h3>
+          <h3 className="urp-card-title">Điều kiện nâng hạng</h3>
 
-          {isMaxLevel ? (
+          {isMaxRank ? (
             <div style={{
               border: "1px solid #bfdbfe",
               background: "#eff6ff",
               borderRadius: 10, padding: 14, marginBottom: 18,
               fontSize: 13, color: "#1e40af",
             }}>
-              🏆 Bạn đã đạt <strong>Cấp {MAX_LEVEL}</strong> — cấp bậc tối đa.
-              Hệ thống không còn cấp cao hơn để nâng. Quyền lợi của bạn:
+              🏆 Bạn đã đạt hạng <strong>{MAX_RANK}</strong> — hạng cao nhất.
+              Hệ thống không còn hạng cao hơn để nâng. Quyền lợi của bạn:
               <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
                 <li>Hưởng tỉ lệ hoa hồng cá nhân cao nhất.</li>
-                <li>Nhận hoa hồng từ tuyến dưới (F1, F2) ở mức cao nhất.</li>
+                <li>Nhận hoa hồng từ tuyến dưới (F1, F2, F3) ở mức cao nhất.</li>
                 <li>Có quyền yêu cầu chỉnh sửa hoa hồng trực tiếp với admin.</li>
               </ul>
             </div>
@@ -289,7 +296,7 @@ function Upgraderequestpage() {
             borderRadius: 10, padding: 14, marginBottom: 18,
           }}>
             <p style={{ fontSize: 12, color: "#475569", margin: "0 0 8px" }}>
-              Yêu cầu để lên <strong>Cấp {Math.max(MAX_LEVEL, currentLevelEarly - 1)}</strong>:
+              Yêu cầu để nâng từ <strong>{currentRank}</strong> lên <strong>{nextRank}</strong>:
             </p>
             {conditions.map((c) => {
               const ok = c.current >= c.target;
@@ -319,7 +326,7 @@ function Upgraderequestpage() {
             })}
             {!conditionsMet && (
               <p style={{ fontSize: 12, color: "#78350f", marginTop: 8, marginBottom: 0 }}>
-                Bạn cần đạt đủ cả 3 điều kiện trên mới có thể gửi yêu cầu nâng cấp.
+                Bạn cần đạt đủ cả 3 điều kiện trên mới có thể gửi yêu cầu nâng hạng.
               </p>
             )}
           </div>
@@ -333,10 +340,10 @@ function Upgraderequestpage() {
 
             {/* Lý do */}
             <div className="urp-field">
-              <label className="urp-label">Lý do yêu cầu nâng cấp <span className="urp-required">*</span></label>
+              <label className="urp-label">Lý do yêu cầu nâng hạng <span className="urp-required">*</span></label>
               <textarea
                 className="urp-textarea"
-                placeholder="Mô tả lý do bạn muốn nâng cấp lên Cấp (kinh nghiệm, kế hoạch kinh doanh...)"
+                placeholder="Mô tả lý do bạn muốn nâng hạng (kinh nghiệm, kế hoạch kinh doanh, KPI đạt được...)"
                 rows={5}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -345,11 +352,11 @@ function Upgraderequestpage() {
 
             {/* Download hợp đồng mẫu */}
             <div className="urp-field">
-              <label className="urp-label">Hợp đồng đối tác Cấp {nextLevel} <span className="urp-required">*</span></label>
+              <label className="urp-label">Hợp đồng đối tác hạng {nextRank || currentRank} <span className="urp-required">*</span></label>
               <div className="urp-download-box">
                 <span className="urp-download-icon">📄</span>
                 <div>
-                  <p className="urp-download-name">Hợp đồng mẫu Cấp {nextLevel} - SIVIP.pdf</p>
+                  <p className="urp-download-name">Hợp đồng mẫu {nextRank || currentRank} - SIVIP.pdf</p>
                   <p className="urp-download-sub">Tải về, ký tay rồi upload lại bên dưới</p>
                 </div>
                 <a
@@ -402,26 +409,26 @@ function Upgraderequestpage() {
               <ul>
                 <li>Thông tin và hợp đồng tôi cung cấp là chính xác và hợp lệ.</li>
                 <li>Tôi đã đọc và đồng ý với tất cả các điều khoản trong hợp đồng.</li>
-                <li>Tôi cam kết thực hiện đầy đủ nghĩa vụ của Đối tác Cấp {nextLevel}.</li>
+                <li>Tôi cam kết thực hiện đầy đủ nghĩa vụ của Đối tác hạng {nextRank || currentRank}.</li>
               </ul>
             </div>
 
             <button
               className="urp-btn-submit"
               type="submit"
-              disabled={submitting || !conditionsMet || isMaxLevel}
+              disabled={submitting || !conditionsMet || isMaxRank}
               title={
-                isMaxLevel ? `Đã đạt Cấp ${MAX_LEVEL} — cấp bậc tối đa` :
-                !conditionsMet ? "Bạn chưa đủ điều kiện nâng cấp" : ""
+                isMaxRank ? `Đã đạt hạng ${MAX_RANK} — hạng cao nhất` :
+                !conditionsMet ? "Bạn chưa đủ điều kiện nâng hạng" : ""
               }
             >
               {submitting
                 ? "Đang gửi..."
-                : isMaxLevel
-                  ? `🏆 Đã đạt Cấp ${MAX_LEVEL} — cấp tối đa`
+                : isMaxRank
+                  ? `🏆 Đã đạt hạng ${MAX_RANK} — hạng cao nhất`
                   : conditionsMet
-                    ? `✓ Gửi yêu cầu nâng cấp lên Cấp ${nextLevel}`
-                    : "🔒 Chưa đủ điều kiện nâng cấp"}
+                    ? `✓ Gửi yêu cầu nâng hạng lên ${nextRank}`
+                    : "🔒 Chưa đủ điều kiện nâng hạng"}
             </button>
           </form>
         </div>

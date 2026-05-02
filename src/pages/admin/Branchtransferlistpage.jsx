@@ -13,6 +13,8 @@ import useAuthStore from "../../store/authStore";
 import { notify } from "../../store/Notificationservice";
 import "./Customercontractpage.css";
 
+const MAX_TREE_DEPTH = 3;
+
 /* ─── Helper: collect descendants để chống vòng lặp ─── */
 function collectDescendants(partners, rootId) {
   const ids = new Set([String(rootId)]);
@@ -27,6 +29,24 @@ function collectDescendants(partners, rootId) {
     }
   }
   return ids;
+}
+
+/** Độ sâu lớn nhất tính từ root xuống các con cháu (root tính 0). */
+function maxSubtreeDepth(partners, rootId) {
+  let depth = 0;
+  let frontier = [String(rootId)];
+  const visited = new Set(frontier);
+  while (frontier.length > 0) {
+    const next = [];
+    for (const id of frontier) {
+      partners
+        .filter((p) => String(p.parentId) === id && !visited.has(String(p.id)))
+        .forEach((p) => { visited.add(String(p.id)); next.push(String(p.id)); });
+    }
+    if (next.length > 0) depth += 1;
+    frontier = next;
+  }
+  return depth;
 }
 
 const PAGE_SIZE = 10;
@@ -209,14 +229,26 @@ function Branchtransferlistpage() {
         return;
       }
 
+      // Validate cấp trần: newParent.level + 1 (cho partner) + độ sâu nhánh con của partner ≤ 3
+      const parentLvl    = Number(newParent.level) || 0;
+      const subtreeDepth = maxSubtreeDepth(all, partner.id);
+      if (parentLvl + 1 + subtreeDepth > MAX_TREE_DEPTH) {
+        alert(
+          `Không thể chuyển: cấp trên mới đang ở Cấp ${parentLvl}, ` +
+          `nhánh của ${partner.name} sâu ${subtreeDepth} cấp — sẽ vượt trần Cấp ${MAX_TREE_DEPTH}. ` +
+          `Hủy duyệt.`
+        );
+        return;
+      }
+
       const oldParentId = partner.parentId;
 
       // 2. PUT partner: đổi parentId + recompute level (tree depth)
       //    Bỏ transferStatus — user đã ổn định ở nhánh mới, không phải "đang chuyển".
       //    Ghost "Đã chuyển qua nhánh khác" sẽ hiển thị ở nhánh CŨ qua branchTransferRequests
       //    (orgchart đọc requests có status=approved + currentParentId).
-      const newLevel      = (Number(newParent.level) || 0) + 1;
-      const newLevelLabel = newLevel <= 3 ? `Cấp ${newLevel}` : "Cấp .";
+      const newLevel      = parentLvl + 1;
+      const newLevelLabel = `Cấp ${newLevel}`;
       await api.put(`/partners/${partner.id}`, {
         ...partner,
         parentId:       newParentId,
@@ -237,8 +269,8 @@ function Branchtransferlistpage() {
           const { p, depth } = queue.shift();
           if (visited.has(String(p.id))) continue;
           visited.add(String(p.id));
-          const lbl = depth <= 3 ? `Cấp ${depth}` : "Cấp .";
-          await api.put(`/partners/${p.id}`, { ...p, level: depth, levelLabel: lbl });
+          const cappedDepth = Math.min(MAX_TREE_DEPTH, depth);
+          await api.put(`/partners/${p.id}`, { ...p, level: cappedDepth, levelLabel: `Cấp ${cappedDepth}` });
           all.filter((c) => String(c.parentId) === String(p.id))
              .forEach((c) => queue.push({ p: c, depth: depth + 1 }));
         }
