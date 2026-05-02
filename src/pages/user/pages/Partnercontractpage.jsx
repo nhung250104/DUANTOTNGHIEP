@@ -94,11 +94,11 @@ function JoinTeamModal({ partner, onClose, onSubmitted }) {
       await api.post("/joinTeamRequests", {
         id:               String(maxId + 1),
         partnerId:        String(partner.id),
-        partnerCode:      `DT${String(partner.code || partner.id).padStart(6, "0")}`,
+        partnerCode:      `${String(partner.code || partner.id).padStart(6, "0")}`,
         partnerName:      partner.name,
         newParentId:      foundParent ? String(foundParent.id) : null,
         newParentName:    foundParent?.name || null,
-        newParentCode:    foundParent ? `DT${String(foundParent.code || foundParent.id).padStart(6, "0")}` : null,
+        newParentCode:    foundParent ? `${String(foundParent.code || foundParent.id).padStart(6, "0")}` : null,
         reason:           reason.trim(),
         status:           "pending",
         createdAt:        getNow(),
@@ -307,7 +307,7 @@ function Partnercontractpage() {
   // Contract data cho PDF modal
   const pdfContractData = {
     code:            contractCode,
-    partnerCode:     `DT${String(partner.code || partner.id).padStart(6, "0")}`,
+    partnerCode:     `${String(partner.code || partner.id).padStart(6, "0")}`,
     partnerName:     partner.name,
     partnerEmail:    partner.email,
     partnerPhone:    partner.phone,
@@ -396,7 +396,7 @@ function Partnercontractpage() {
             <div style={{ background: "#f0fdfa", padding: 14, borderRadius: 10, border: "1px solid #99f6e4" }}>
               <p style={{ fontWeight: 700, color: "#0d9488", margin: "0 0 8px", fontSize: 13 }}>BÊN B — ĐỐI TÁC</p>
               <Field label="Họ và tên"     value={partner.name} highlight />
-              <Field label="Mã đối tác"     value={`DT${String(partner.code || partner.id).padStart(6, "0")}`} />
+              <Field label="Mã đối tác"     value={`${String(partner.code || partner.id).padStart(6, "0")}`} />
               <Field label="CCCD"           value={partner.cccd} />
               <Field label="Điện thoại"     value={partner.phone} />
               <Field label="Email"          value={partner.email} />

@@ -81,7 +81,7 @@ function Partnercontractdetailpage() {
           setRawPartner(partner);
           setContract({
             code:            `HDDT${String(partner.id).padStart(6, "0")}`,
-            partnerCode:     `DT${String(partner.code || partner.id).padStart(6, "0")}`,
+            partnerCode:     `${String(partner.code || partner.id).padStart(6, "0")}`,
             partnerName:     partner.name,
             partnerEmail:    partner.email,
             partnerPhone:    partner.phone,
@@ -117,7 +117,7 @@ function Partnercontractdetailpage() {
             // Mã HĐ nâng cấp: HDDT + 6 chữ số tăng dần (lấy theo upgrade id, +1000 để tách
             // khỏi HĐ đăng ký đầu tiên, đảm bảo không trùng).
             code:            `HDDT${String(1000 + Number(upgrade.id)).padStart(6, "0")}`,
-            partnerCode:     upgrade.partnerCode || `DT${String(upgrade.partnerId).padStart(6, "0")}`,
+            partnerCode:     upgrade.partnerCode || `${String(upgrade.partnerId).padStart(6, "0")}`,
             partnerName:     upgrade.partnerName,
             partnerEmail:    partner?.email,
             partnerPhone:    partner?.phone,

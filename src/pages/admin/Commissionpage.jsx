@@ -127,7 +127,7 @@ function CommissionPage() {
           return {
             code: c.code, customerName: c.customerName, value: c.value,
             partnerName: cp?.name || "—",
-            partnerCode: cp ? `#DT${String(cp.code||cp.id).padStart(6,"0")}` : "",
+            partnerCode: cp ? `${String(cp.code||cp.id).padStart(6,"0")}` : "",
             rate: commRate.l2, commission: Math.round((c.value||0)*commRate.l2/100),
             condition: "Hợp đồng có hiệu lực", contractId: c.id,
           };
@@ -142,9 +142,9 @@ function CommissionPage() {
           const gpC = allContracts.filter((c) => String(c.partnerId)===String(gp.id) && c.status==="approved");
           const totalValue = gpC.reduce((s,c) => s+(c.value||0), 0);
           return {
-            name: gp.name, code: `#DT${String(gp.code||gp.id).padStart(6,"0")}`,
+            name: gp.name, code: `${String(gp.code||gp.id).padStart(6,"0")}`,
             parentName: pp?.name||"—",
-            parentCode: pp ? `#DT${String(pp.code||pp.id).padStart(6,"0")}` : "",
+            parentCode: pp ? `${String(pp.code||pp.id).padStart(6,"0")}` : "",
             contractCount: gpC.length, totalValue,
             rate: commRate.l3, commission: Math.round(totalValue*commRate.l3/100),
           };

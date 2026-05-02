@@ -43,7 +43,7 @@ const buildContractList = (partners, upgradeRequests) => {
       list.push({
         id:           `partner-${p.id}`,
         partnerId:    p.id,
-        partnerCode:  `DT${String(p.code).padStart(6, "0")}`,
+        partnerCode:  `${String(p.code).padStart(6, "0")}`,
         partnerName:  p.name,
         contractType: "Đăng ký làm đối tác",
         signDate:     p.joinDate || "—",
@@ -65,7 +65,7 @@ const buildContractList = (partners, upgradeRequests) => {
         id:           `upgrade-${r.id}`,
         upgradeId:    r.id,
         partnerId:    r.partnerId,
-        partnerCode:  r.partnerCode || `DT${String(r.partnerId).padStart(6, "0")}`,
+        partnerCode:  r.partnerCode || `${String(r.partnerId).padStart(6, "0")}`,
         partnerName:  r.partnerName,
         contractType: `Đăng ký làm đối tác cấp ${nextLevel}`,
         signDate:     r.approvedAt || r.submittedAt || "—",
