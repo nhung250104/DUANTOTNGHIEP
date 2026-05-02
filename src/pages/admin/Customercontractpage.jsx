@@ -25,14 +25,15 @@ const getNow = () => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
+// Hoa hồng theo CẤP (level 0..3). 0 = cao nhất, 3 = mới đăng ký.
 const DEFAULT_RATES = {
-  1: { l1: 20, l2: 10, l3: 3 },
-  2: { l1: 25, l2: 12, l3: 5 },
-  3: { l1: 30, l2: 15, l3: 7 },
+  0: { l1: 35, l2: 18, l3: 10 }, // Cấp 0 (top)
+  1: { l1: 30, l2: 15, l3: 7  },
+  2: { l1: 25, l2: 12, l3: 5  },
+  3: { l1: 20, l2: 10, l3: 3  }, // Cấp 3 (mới đăng ký)
 };
-// Hoa hồng phụ thuộc vào "tier" (hạng nâng cấp 1/2/3), KHÔNG phải level (độ sâu trong cây).
 const ratesOf = (partner) =>
-  partner?.commissionRates || DEFAULT_RATES[partner?.tier] || DEFAULT_RATES[1];
+  partner?.commissionRates || DEFAULT_RATES[partner?.level] || DEFAULT_RATES[3];
 
 const nextId = async (collection) => {
   try {

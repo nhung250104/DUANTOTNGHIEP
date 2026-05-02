@@ -85,37 +85,28 @@ def main():
         })
         d["promotionHistory"] = promotions
 
-    # 6. Tách "tier" (cấp nâng cấp cũ 1/2/3) khỏi "level" (độ sâu trong cây 0/1/2/3/.).
-    #    - tier      = level cũ (giữ nguyên cho commission + upgrade flow)
-    #    - level     = tree depth (root = 0, mỗi bước xuống +1; > 3 hiển thị ".")
-    #    - levelLabel = "Cấp 0/1/2/3" hoặc "Cấp ." cho > 3
+    # 6. Mô hình mới: chỉ có 1 khái niệm "level" (cấp). 4 cấp 0..3.
+    #    Cấp 0 = cao nhất; Cấp 3 = thấp nhất (mới đăng ký).
+    #    Upgrade đi NGƯỢC: 3 → 2 → 1 → 0.
+    #    Migration:
+    #      - Nếu partner còn field `tier` (1/2/3) ⇒ invert sang level: 4 - tier.
+    #        (tier 1 = mới đăng ký → level 3, tier 3 = đã max cũ → level 1)
+    #      - Xoá field `tier`, `tierLabel`.
+    #      - levelLabel = "Cấp X" (X = 0..3).
     partners = d.get("partners", [])
-    by_id    = {str(p.get("id")): p for p in partners}
-
-    def compute_depth(pid, seen=None):
-        seen = seen or set()
-        if pid in seen:           # cycle guard
-            return 0
-        seen.add(pid)
-        p = by_id.get(str(pid))
-        if not p: return 0
-        parent = p.get("parentId")
-        if not parent:            # root
-            return 0
-        return compute_depth(str(parent), seen) + 1
-
     for p in partners:
-        # Backup tier nếu chưa có
-        if p.get("tier") is None:
-            old_level = p.get("level")
-            if isinstance(old_level, int) and 1 <= old_level <= 3:
-                p["tier"]      = old_level
-                p["tierLabel"] = f"Hạng {old_level}"
-
-        # Re-compute level = tree depth
-        depth = compute_depth(str(p.get("id")))
-        p["level"]      = depth
-        p["levelLabel"] = f"Cấp {depth}" if depth <= 3 else "Cấp ."
+        if p.get("tier") in (1, 2, 3):
+            new_level = 4 - p["tier"]   # 1→3, 2→2, 3→1
+        elif isinstance(p.get("level"), int) and 0 <= p["level"] <= 3:
+            # Đã có level theo schema mới — giữ nguyên
+            new_level = p["level"]
+        else:
+            # Default partner mới: level 3 (thấp nhất)
+            new_level = 3
+        p["level"]      = new_level
+        p["levelLabel"] = f"Cấp {new_level}"
+        p.pop("tier", None)
+        p.pop("tierLabel", None)
 
     # 7. Đảm bảo $schema vẫn nằm cuối (cho tidy)
     schema = d.pop("$schema", None)

@@ -188,16 +188,16 @@ const formatCurrency = (amount) =>
 const getInitials = (name = "") =>
   name.trim().split(" ").filter(Boolean).slice(-2).map((w) => w[0].toUpperCase()).join("");
 
-// Hoa hồng theo "tier" (hạng nâng cấp 1/2/3) — KHÔNG phải level (độ sâu trong cây).
-// Ưu tiên rate tự định nghĩa cho partner (sau khi admin duyệt yêu cầu chỉnh sửa HH).
+// Hoa hồng theo CẤP (level 0..3). 0 = cao nhất.
 const DEFAULT_RATES = {
-  1: { l1: 20, l2: 10, l3: 3 },
-  2: { l1: 25, l2: 12, l3: 5 },
-  3: { l1: 30, l2: 15, l3: 7 },
+  0: { l1: 35, l2: 18, l3: 10 },
+  1: { l1: 30, l2: 15, l3: 7  },
+  2: { l1: 25, l2: 12, l3: 5  },
+  3: { l1: 20, l2: 10, l3: 3  },
 };
 const getCommissionRates = (partner) => {
   if (partner?.commissionRates) return partner.commissionRates;
-  return DEFAULT_RATES[partner?.tier] || DEFAULT_RATES[1];
+  return DEFAULT_RATES[partner?.level] || DEFAULT_RATES[3];
 };
 
 // ─── Sub-components ─────────────────────────────────────────
@@ -300,7 +300,7 @@ function Partnercontractpage() {
 
   const commission   = getCommissionRates(partner);
   const contractCode = `HDDT${String(partner.id).padStart(6, "0")}`;
-  const canUpgrade   = (partner.tier || 1) < 3;          // hạng nâng cấp 1/2/3
+  const canUpgrade   = (partner.level ?? 3) > 0;         // có thể nâng nếu chưa Cấp 0
   const isIndependent = partner.memberType === "INDEPENDENT";
 
   return (

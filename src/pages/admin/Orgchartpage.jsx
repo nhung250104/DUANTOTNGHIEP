@@ -209,6 +209,55 @@ function Orgchartpage() {
     })();
   }, []);
 
+  /* Ghost map: oldParentId → [{ requestId, partnerName, partnerCode, newParentName, processedAt }, …] */
+  const ghostsByOldParent = transferRequests.reduce((acc, t) => {
+    if (!t.currentParentId) return acc;
+    const key = String(t.currentParentId);
+    (acc[key] = acc[key] || []).push({
+      requestId:     t.id,
+      partnerName:   t.partnerName,
+      partnerCode:   t.partnerCode,
+      newParentName: t.newParentName,
+      processedAt:   t.processedAt,
+    });
+    return acc;
+  }, {});
+
+  /* ── User mode: chỉ hiển thị parent (cấp trên trực tiếp) + me ───────────
+     KHÔNG hiển thị: siblings, grandparent, descendants của me,
+                     hoặc nhánh khác của hệ thống.
+     Yêu cầu rõ ràng từ user: tree chỉ thấy bản thân + cấp trên trực tiếp.
+  ──────────────────────────────────────────────────────────────────────── */
+  useEffect(() => {
+    if (!userMode || !currentUser || allPartners.length === 0) return;
+    const me = allPartners.find(
+      (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
+    );
+    if (!me) return;
+
+    setSearchText(me.name);
+
+    // Tạo node me KHÔNG có children (strip mọi descendants)
+    const meNodeStripped = { ...me, children: [] };
+
+    let root;
+    if (me.parentId) {
+      const parent = allPartners.find((p) => String(p.id) === String(me.parentId));
+      if (parent) {
+        // Parent CHỈ có 1 child = me, không có siblings/descendants khác
+        root = { ...parent, children: [meNodeStripped] };
+      } else {
+        root = meNodeStripped;
+      }
+    } else {
+      root = meNodeStripped;
+    }
+    assignRelLevel(root, 1);
+
+    setExpandedIds(new Set([root.id, meNodeStripped.id]));
+    setRootNode(root);
+  }, [userMode, currentUser, allPartners]);
+
   /* ── Build tree khi root thay đổi ── */
   const buildRoot = (partner) => {
     const map  = buildMap(allPartners);
