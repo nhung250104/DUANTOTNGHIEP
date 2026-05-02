@@ -162,12 +162,22 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
                   <td>{row.phone}</td>
                   <td>{row.address}</td>
                   <td>
-                    <span style={{
-                      display: "inline-block", padding: "2px 8px", borderRadius: 6,
-                      background: "#e0f2fe", color: "#075985", fontSize: 11, fontWeight: 600,
-                    }}>
-                      {row.levelLabel || (row.level != null ? `Cấp ${row.level}` : "—")}
-                    </span>
+                    {row.level != null ? (
+                      <span style={{
+                        display: "inline-block", padding: "2px 8px", borderRadius: 6,
+                        background: "#e0f2fe", color: "#075985", fontSize: 11, fontWeight: 600,
+                      }}>
+                        {row.levelLabel || `Cấp ${row.level}`}
+                      </span>
+                    ) : (
+                      <span style={{
+                        display: "inline-block", padding: "2px 8px", borderRadius: 6,
+                        background: "#f1f5f9", color: "#64748b", fontSize: 11, fontWeight: 600,
+                        fontStyle: "italic",
+                      }}>
+                        Chưa có cấp
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span style={{
@@ -266,15 +276,19 @@ function Partnerprofilepage() {
       const approvedDate = new Date().toLocaleDateString("vi-VN");
 
       // 1. Cập nhật partner → approved
-      //    - level: tree depth (0 nếu chưa có parent; auto-place hoặc gán nhánh sẽ tính lại)
+      //    - level: chỉ có khi đã có parentId (admin xếp nhánh hoặc auto-place sau).
+      //      Awaiting/INDEPENDENT → level=null, levelLabel="Chưa có cấp".
       //    - rank:  hạng KPI; mặc định "Member" cho hồ sơ mới
-      //    - refLink: cấp nào cũng có link giới thiệu
-      const newLevel = partner.parentId ? (partner.level ?? 0) : 0;
+      //    - refLink: link giới thiệu cá nhân (mọi partner approved đều có)
+      const isIndependent = (partner.memberType || "").toUpperCase() === "INDEPENDENT";
+      const hasParent     = !!partner.parentId;
+      const newLevel      = !isIndependent && hasParent ? (partner.level ?? null) : null;
+      const newLevelLabel = newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp";
       await partnerService.update(partner.id, {
         ...partner,
         status:     "approved",
         level:      newLevel,
-        levelLabel: `Cấp ${newLevel}`,
+        levelLabel: newLevelLabel,
         rank:       partner.rank || "Member",
         rankLabel:  partner.rank || "Member",
         joinDate:   approvedDate,
@@ -317,8 +331,8 @@ function Partnerprofilepage() {
             await partnerService.update(partner.id, {
               ...partner,
               status:     "approved",
-              level:      1,
-              levelLabel: "Cấp 1",
+              level:      newLevel,
+              levelLabel: newLevelLabel,
               joinDate:   approvedDate,
               userId:     existUser.id, // gắn lại userId để đồng bộ về sau
             });
@@ -340,8 +354,8 @@ function Partnerprofilepage() {
             await partnerService.update(partner.id, {
               ...partner,
               status:     "approved",
-              level:      1,
-              levelLabel: "Cấp 1",
+              level:      newLevel,
+              levelLabel: newLevelLabel,
               joinDate:   approvedDate,
               userId:     createdUser.id,
             });
@@ -358,7 +372,9 @@ function Partnerprofilepage() {
             ? {
                 ...p,
                 status: "approved",
-                level: 3, levelLabel: "Cấp 3",
+                level: newLevel, levelLabel: newLevelLabel,
+                rank: p.rank || "Member",
+                rankLabel: p.rank || "Member",
                 joinDate: approvedDate,
                 refLink: p.refLink || `sivip.vn/ref/${p.code}`,
               }
@@ -572,7 +588,9 @@ function Partnerprofilepage() {
 
   const matchLevel = (p) => {
     if (!levelFilter) return true;
-    const lv = Number(p.level) || 0;
+    if (levelFilter === "none") return p.level == null;
+    if (p.level == null) return false;
+    const lv = Number(p.level);
     if (levelFilter === "3plus") return lv >= 3;
     return String(lv) === levelFilter;
   };
@@ -724,7 +742,7 @@ function Partnerprofilepage() {
                 <span style={{ marginRight: 6 }}>Lọc theo cấp:</span>
                 {[
                   { key: "",      label: "Tất cả" },
-                  { key: "0",     label: "Cấp 0" },
+                  { key: "none",  label: "Chưa có cấp" },
                   { key: "1",     label: "Cấp 1" },
                   { key: "2",     label: "Cấp 2" },
                   { key: "3plus", label: "Cấp 3+" },
@@ -921,14 +939,24 @@ function JoinTeamTab({ requests, partners, currentUser, onChange }) {
     if (!window.confirm(`Duyệt yêu cầu của ${req.partnerName} dưới cấp trên ${req.newParentName || "(chưa chọn)"}?`)) return;
     setBusy(req.id);
     try {
-      // Cập nhật partner: gắn parentId + đổi memberType
+      // Cập nhật partner: gắn parentId + đổi memberType + tính level từ parent.
       const pRes = await api.get(`/partners/${req.partnerId}`);
       const partner = pRes.data;
       if (partner) {
+        let newLevel = null;
+        if (req.newParentId) {
+          try {
+            const parentRes = await api.get(`/partners/${req.newParentId}`);
+            const parentLvl = Number(parentRes.data?.level);
+            newLevel = Math.min(3, (Number.isFinite(parentLvl) ? parentLvl : 0) + 1);
+          } catch { newLevel = 1; }
+        }
         await api.put(`/partners/${req.partnerId}`, {
           ...partner,
           parentId:   req.newParentId || null,
           memberType: "NORMAL",
+          level:      newLevel,
+          levelLabel: newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp",
         });
       }
       const updated = { ...req, status: "approved", processedAt: new Date().toLocaleDateString("vi-VN") };

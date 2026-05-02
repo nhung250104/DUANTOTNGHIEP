@@ -207,14 +207,18 @@ function Partnerdetailpage({ userMode = false } = {}) {
   const handleApprove = async (file) => {
     try {
       setSaving(true);
+      // level chỉ được gán khi đã có parentId (admin xếp nhánh hoặc auto-place sau).
+      // INDEPENDENT/awaiting → level=null, hiển thị "Chưa có cấp".
+      const isIndependent = (partner.memberType || "").toUpperCase() === "INDEPENDENT";
+      const hasParent     = !!partner.parentId;
+      const newLevel      = !isIndependent && hasParent ? (partner.level ?? null) : null;
       const updated = {
         ...partner,
         status:       "approved",
         contractFile: file.name,
         joinDate:     new Date().toLocaleDateString("vi-VN"),
-        // level = độ sâu trong cây (0..3, 0 = chưa có cha); rank = hạng KPI (Member..Senior Partner)
-        level:        partner.parentId ? (partner.level ?? 0) : 0,
-        levelLabel:   `Cấp ${partner.parentId ? (partner.level ?? 0) : 0}`,
+        level:        newLevel,
+        levelLabel:   newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp",
         rank:         partner.rank || "Member",
         rankLabel:    partner.rank || "Member",
         parentId:     partner.parentId || null,
@@ -358,7 +362,7 @@ function Partnerdetailpage({ userMode = false } = {}) {
                 <SectionTitle>Thông tin công việc</SectionTitle>
                 <div className="pd-grid">
                   <Field label="Mã đối tác"            value={p.code}              />
-                  <Field label="Cấp (vị trí trong cây)" value={p.levelLabel || (p.level != null ? `Cấp ${p.level}` : "—")} teal />
+                  <Field label="Cấp (vị trí trong cây)" value={p.level != null ? (p.levelLabel || `Cấp ${p.level}`) : "Chưa có cấp"} teal />
                   <Field label="Hạng (KPI)"            value={p.rank || p.rankLabel || "Member"} teal />
                   <Field label="Quản lý bởi"           value={p.managedBy}         />
                   <Field label="Ngân hàng"             value={p.bank}              />
