@@ -328,6 +328,7 @@
       "status": "approved",
       "joinDate": "15/02/2025",
 <<<<<<< HEAD
+<<<<<<< HEAD
       "parentId": "6",
       "level": 2,
       "levelLabel": "Cấp 2",
@@ -335,6 +336,11 @@
       "parentId": null,
       "level": 0,
       "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
+=======
+      "parentId": "1",
+      "level": 1,
+      "levelLabel": "Cấp 1",
 >>>>>>> fix/routing-and-auth-issues
       "contracts": 8,
       "commission": 90000000,
@@ -355,7 +361,11 @@
       "memberType": "NORMAL",
       "rank": "Member",
       "rankLabel": "Member",
+<<<<<<< HEAD
       "referralCode": "000006"
+=======
+      "referralCode": "000001"
+>>>>>>> fix/routing-and-auth-issues
     },
     {
       "id": "3",
@@ -368,6 +378,7 @@
       "status": "approved",
       "joinDate": "20/03/2025",
 <<<<<<< HEAD
+<<<<<<< HEAD
       "parentId": "5",
       "level": 2,
       "levelLabel": "Cấp 2",
@@ -375,6 +386,11 @@
       "parentId": null,
       "level": 0,
       "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
+=======
+      "parentId": "2",
+      "level": 2,
+      "levelLabel": "Cấp 2",
 >>>>>>> fix/routing-and-auth-issues
       "contracts": 5,
       "commission": 60800000,
@@ -395,7 +411,11 @@
       "memberType": "NORMAL",
       "rank": "Member",
       "rankLabel": "Member",
+<<<<<<< HEAD
       "referralCode": "000005"
+=======
+      "referralCode": "000002"
+>>>>>>> fix/routing-and-auth-issues
     },
     {
       "id": "4",
@@ -450,6 +470,7 @@
       "status": "approved",
       "joinDate": "05/05/2025",
 <<<<<<< HEAD
+<<<<<<< HEAD
       "parentId": "2",
       "level": 1,
       "levelLabel": "Cấp 1",
@@ -457,6 +478,11 @@
       "parentId": null,
       "level": 0,
       "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
+=======
+      "parentId": "3",
+      "level": 3,
+      "levelLabel": "Cấp 3",
 >>>>>>> fix/routing-and-auth-issues
       "contracts": 4,
       "commission": 48240000,
@@ -477,7 +503,11 @@
       "memberType": "NORMAL",
       "rank": "Member",
       "rankLabel": "Member",
+<<<<<<< HEAD
       "referralCode": "000002"
+=======
+      "referralCode": "000003"
+>>>>>>> fix/routing-and-auth-issues
     },
     {
       "id": "6",
@@ -490,6 +520,7 @@
       "status": "approved",
       "joinDate": "20/05/2025",
 <<<<<<< HEAD
+<<<<<<< HEAD
       "parentId": "1",
       "level": 1,
       "levelLabel": "Cấp 1",
@@ -497,6 +528,11 @@
       "parentId": null,
       "level": 0,
       "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
+=======
+      "parentId": "1",
+      "level": 1,
+      "levelLabel": "Cấp 1",
 >>>>>>> fix/routing-and-auth-issues
       "contracts": 2,
       "commission": 22000000,
@@ -539,7 +575,7 @@
       "submittedAt": "10:59:14 07/04/2026",
       "userId": "8",
       "parentId": "4",
-      "referralCode": null,
+      "referralCode": "000004",
       "level": 1,
       "levelLabel": "Cấp 1",
       "contracts": 0,

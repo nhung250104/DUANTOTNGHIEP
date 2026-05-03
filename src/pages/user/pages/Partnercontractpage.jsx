@@ -41,17 +41,11 @@ const extractCode = (input = "") => {
   return t;
 };
 
-// Hoa hồng theo HẠNG (rank). KHÔNG dựa vào cấp trong cây (level).
-const DEFAULT_RATES = {
-  "Member":         { l1: 20, l2: 10, l3: 3  },
-  "Leader":         { l1: 25, l2: 12, l3: 5  },
-  "Partner":        { l1: 30, l2: 15, l3: 7  },
-  "Senior Partner": { l1: 35, l2: 18, l3: 10 },
-};
-const getCommissionRates = (partner) => {
-  if (partner?.commissionRates) return partner.commissionRates;
-  return DEFAULT_RATES[partner?.rank] || DEFAULT_RATES["Member"];
-};
+// Hoa hồng đến TỪ HỢP ĐỒNG ACTIVE — service tự xác định rates theo hạng đang ghi trong contract.
+import {
+  getActiveContract, getContractsForPartner,
+  commissionExamples, ratesForRank, CONTRACT_STATUS,
+} from "../../../store/partnerContractService";
 
 /* ─── Modal: Yêu cầu tham gia đội nhóm (cho INDEPENDENT) ─── */
 function JoinTeamModal({ partner, onClose, onSubmitted }) {
@@ -235,6 +229,7 @@ function Partnercontractpage() {
 
   const [partner,   setPartner]   = useState(null);
   const [contracts, setContracts] = useState([]);   // customerContracts của user
+  const [upgradeReqs, setUpgradeReqs] = useState([]); // để build contract history
   const [loading,   setLoading]   = useState(true);
   const [error,     setError  ]   = useState("");
 
@@ -247,12 +242,14 @@ function Partnercontractpage() {
     const fetchAll = async () => {
       if (!currentUser) return;
       try {
-        const [pRes, cRes] = await Promise.all([
+        const [pRes, cRes, uRes] = await Promise.all([
           partnerService.getAll(),
           api.get("/customerContracts"),
+          api.get("/upgradeRequests"),
         ]);
         const pList = Array.isArray(pRes.data) ? pRes.data : [];
         const cList = Array.isArray(cRes.data) ? cRes.data : [];
+        const uList = Array.isArray(uRes.data) ? uRes.data : [];
 
         let found = pList.find((p) => p.userId === String(currentUser.id));
         if (!found) found = pList.find((p) => p.email === currentUser.email);
@@ -263,6 +260,7 @@ function Partnercontractpage() {
         }
         setPartner(found);
         setContracts(cList.filter((c) => String(c.partnerId) === String(found.id)));
+        setUpgradeReqs(uList.filter((u) => String(u.partnerId) === String(found.id)));
       } catch {
         setError("Không thể tải thông tin hợp đồng. Vui lòng thử lại.");
       } finally {
@@ -287,13 +285,20 @@ function Partnercontractpage() {
     </div>
   );
 
-  const commission   = getCommissionRates(partner);
-  const contractCode = `HDDT${String(partner.id).padStart(6, "0")}`;
+  // ── Lấy thông tin từ HỢP ĐỒNG ACTIVE (theo spec) ──
+  const allContracts  = getContractsForPartner(partner, upgradeReqs);
+  const activeContract = getActiveContract(partner, upgradeReqs);
+  // Rates lấy từ contract active. Nếu chưa có hợp đồng active (rare), fallback theo rank hiện tại.
+  const commission    = activeContract?.rates || ratesForRank(partner.rank);
+  const contractCode  = activeContract?.code  || `HDDT${String(partner.id).padStart(6, "0")}`;
+  const contractRank  = activeContract?.rank  || partner.rank || "Member";
+  const examples      = commissionExamples(commission);
+
   const isIndependent = partner.memberType === "INDEPENDENT";
   // Chỉ cho nâng hạng khi: đã có cấp trong cây + chưa đạt Senior Partner + không phải INDEPENDENT.
   const canUpgrade   = !isIndependent
                     && partner.level != null
-                    && (partner.rank || "Member") !== "Senior Partner";
+                    && contractRank !== "Senior Partner";
 
   // Stats: HĐ KH approved + doanh thu
   const approvedContracts = contracts.filter((c) => c.status === "approved");
@@ -378,9 +383,24 @@ function Partnercontractpage() {
           </div>
         </div>
         <div className="pcp-hero-right">
-          <div style={{ marginBottom: 8 }}><StatusPill status={partner.status} /></div>
+          {/* Contract status badge — quyết định quyền + hoa hồng */}
+          {activeContract && (() => {
+            const cfg = CONTRACT_STATUS[activeContract.status] || CONTRACT_STATUS.PENDING;
+            return (
+              <div style={{ marginBottom: 8 }}>
+                <span style={{
+                  display: "inline-block",
+                  padding: "4px 12px", borderRadius: 999,
+                  fontSize: 12, fontWeight: 700,
+                  background: cfg.color + "1A",
+                  color: cfg.color,
+                  border: `1px solid ${cfg.color}40`,
+                }}>HĐ {cfg.label}</span>
+              </div>
+            );
+          })()}
           <p className="pcp-hero-date-label">Ngày ký hợp đồng</p>
-          <p className="pcp-hero-date-value">{partner.joinDate || "—"}</p>
+          <p className="pcp-hero-date-value">{activeContract?.signDate || partner.joinDate || "—"}</p>
         </div>
       </div>
 
@@ -429,32 +449,60 @@ function Partnercontractpage() {
             </ul>
 
             <p style={{ fontWeight: 700, color: "#0f172a", margin: "12px 0 4px" }}>
-              Điều 3. Tỉ lệ hoa hồng{partner.level != null ? ` (Cấp ${partner.level})` : ""}
+              Điều 3. Tỉ lệ hoa hồng — Hạng <span style={{ color: "#0d9488" }}>{contractRank}</span>
             </p>
-            {partner.level != null && !isIndependent ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 8 }}>
-                <div className="pcp-commission-card">
-                  <span className="pcp-commission-card-label">Cấp 1 — HĐ tự ký</span>
-                  <span className="pcp-commission-card-value">{commission.l1}%</span>
+            <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 8px" }}>
+              Tỉ lệ hoa hồng được quyết định bởi <strong>HỢP ĐỒNG ĐANG HIỆU LỰC</strong> (status = ACTIVE).
+              Khi nâng hạng, hợp đồng mới sẽ ghi đè tỉ lệ này.
+            </p>
+            {!isIndependent ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 8 }}>
+                  <div className="pcp-commission-card">
+                    <span className="pcp-commission-card-label">Cấp 1 — HĐ tự ký</span>
+                    <span className="pcp-commission-card-value">{commission.l1}%</span>
+                  </div>
+                  <div className="pcp-commission-card">
+                    <span className="pcp-commission-card-label">Cấp 2 — F1 ký</span>
+                    <span className="pcp-commission-card-value">{commission.l2}%</span>
+                  </div>
+                  <div className="pcp-commission-card">
+                    <span className="pcp-commission-card-label">Cấp 3 — F2 ký</span>
+                    <span className="pcp-commission-card-value">{commission.l3}%</span>
+                  </div>
                 </div>
-                <div className="pcp-commission-card">
-                  <span className="pcp-commission-card-label">Cấp 2 — F1 ký</span>
-                  <span className="pcp-commission-card-value">{commission.l2}%</span>
+
+                {/* ── Ví dụ tính hoa hồng ── */}
+                <div style={{
+                  marginTop: 14, padding: "14px 16px", borderRadius: 10,
+                  background: "#f0fdfa", border: "1px solid #99f6e4",
+                }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "#0f766e", margin: "0 0 8px" }}>
+                    💡 Ví dụ tính hoa hồng (giả sử mỗi HĐ trị giá <strong>10.000.000 đ</strong>)
+                  </p>
+                  <div style={{ display: "grid", gap: 6, fontSize: 13, color: "#334155" }}>
+                    {examples.map((ex, i) => (
+                      <div key={i} style={{ paddingLeft: 8, borderLeft: "3px solid #0d9488" }}>
+                        <div style={{ fontWeight: 600 }}>{ex.title}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>Công thức: {ex.formula}</div>
+                        <div style={{ fontSize: 13, color: "#0f766e", fontWeight: 600 }}>→ {ex.example}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 11, color: "#64748b", margin: "10px 0 0", fontStyle: "italic" }}>
+                    Hoa hồng chỉ tính trên các HĐ KH đã được duyệt (status = approved).
+                    F1 = con trực tiếp; F2 = cháu trong cây.
+                  </p>
                 </div>
-                <div className="pcp-commission-card">
-                  <span className="pcp-commission-card-label">Cấp 3 — Đội nhóm</span>
-                  <span className="pcp-commission-card-value">{commission.l3}%</span>
-                </div>
-              </div>
+              </>
             ) : (
               <div style={{
                 marginTop: 8, padding: "12px 14px", borderRadius: 8,
                 background: "#fef3c7", border: "1px solid #fde68a",
                 color: "#92400e", fontSize: 13, lineHeight: 1.5,
               }}>
-                💡 {isIndependent
-                  ? "Bạn là đối tác Tự do riêng lẻ — chỉ hưởng hoa hồng cá nhân theo từng hợp đồng đã ký, không tham gia tuyến hoa hồng cấp 1/2/3."
-                  : "Bạn chưa được phân nhánh trong hệ thống — chưa có cấp nên chưa áp dụng tỉ lệ hoa hồng cấp 1/2/3. Hãy gửi yêu cầu tham gia đội nhóm để được admin xếp nhánh."}
+                💡 Bạn là đối tác <strong>Tự do riêng lẻ</strong> — chỉ hưởng hoa hồng cá nhân theo từng HĐ KH bạn ký,
+                không tham gia tuyến hoa hồng F1/F2.
               </div>
             )}
 
@@ -474,6 +522,54 @@ function Partnercontractpage() {
             </ul>
           </div>
         </div>
+
+        {/* ── Section: Lịch sử hợp đồng (theo spec — không sửa cũ, mỗi lần ký mới = bản ghi mới) ── */}
+        {allContracts.length > 1 && (
+          <div className="pcp-row">
+            <SectionTitle>Lịch sử hợp đồng</SectionTitle>
+            <div style={{
+              border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden",
+              background: "#fff",
+            }}>
+              <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", color: "#475569" }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Mã HĐ</th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Loại</th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Hạng</th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Ngày ký</th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600 }}>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allContracts.map((c) => {
+                    const cfg = CONTRACT_STATUS[c.status] || CONTRACT_STATUS.PENDING;
+                    return (
+                      <tr key={c.id} style={{ borderTop: "1px solid #e2e8f0" }}>
+                        <td style={{ padding: "10px 12px", fontFamily: "monospace", color: "#0d9488", fontWeight: 600 }}>{c.code}</td>
+                        <td style={{ padding: "10px 12px", color: "#334155" }}>{c.contractType}</td>
+                        <td style={{ padding: "10px 12px", color: "#334155" }}>{c.rank}</td>
+                        <td style={{ padding: "10px 12px", color: "#64748b" }}>{c.signDate || "—"}</td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span style={{
+                            display: "inline-block", padding: "2px 10px", borderRadius: 999,
+                            fontSize: 11, fontWeight: 700,
+                            background: cfg.color + "1A", color: cfg.color,
+                            border: `1px solid ${cfg.color}40`,
+                          }}>{cfg.label}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: 11, color: "#64748b", margin: "8px 0 0", fontStyle: "italic" }}>
+              💡 Mỗi lần nâng hạng → tạo hợp đồng mới. Hợp đồng cũ chuyển sang <strong>Hết hiệu lực</strong>;
+              hợp đồng mới <strong>Đang hiệu lực</strong> sẽ áp dụng tỉ lệ hoa hồng mới.
+            </p>
+          </div>
+        )}
 
         {/* ── Section: Tổng hợp hoạt động ── */}
         <div className="pcp-row">

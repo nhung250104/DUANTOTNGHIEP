@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
+import { getContractsForPartner, CONTRACT_STATUS, commissionExamples } from "../../store/partnerContractService";
 import PartnerContractPDFModal from "./Partnercontractpdfmodal";
 import BackButton from "../../components/BackButton";
 import "./PartnerContractPage.css";
@@ -71,76 +72,51 @@ function Partnercontractdetailpage() {
           return;
         }
 
+        // Fetch partner + tất cả upgradeRequests để dùng partnerContractService.
+        let partner = null;
         if (source === "partner") {
-          const res     = await api.get(`/partners/${id}`);
-          const partner = res.data;
-          const comm    = getCommissionByRank(partner.rank);
-          const isIndependent = (partner.memberType || "").toUpperCase() === "INDEPENDENT";
-          const hasLevel      = partner.level != null;
-
-          setRawPartner(partner);
-          setContract({
-            code:            `HDDT${String(partner.id).padStart(6, "0")}`,
-            partnerCode:     `${String(partner.code || partner.id).padStart(6, "0")}`,
-            partnerName:     partner.name,
-            partnerEmail:    partner.email,
-            partnerPhone:    partner.phone,
-            partnerAddress:  partner.address,
-            partnerCccd:     partner.cccd,
-            contractType:    "Đăng ký làm đối tác",
-            signDate:        partner.joinDate,
-            status:          partner.status === "approved" ? "approved" : "pending",
-            contractFile:    partner.contractFile,
-            level:           partner.level,
-            rank:            partner.rank || "Member",
-            // INDEPENDENT/awaiting (chưa có cấp): không hiển thị tỉ lệ HH theo cấp.
-            showTierRates:   !isIndependent && hasLevel,
-            isIndependent,
-            commissionL1:    comm.l1,
-            commissionL2:    comm.l2,
-            commissionL3:    comm.l3,
-            totalCommission: partner.commission || 0,
-          });
-
+          const res = await api.get(`/partners/${id}`);
+          partner = res.data;
         } else if (source === "upgrade") {
-          const [upRes, pRes] = await Promise.all([
-            api.get(`/upgradeRequests/${id}`),
-            // partnerId chưa biết nên fetch upgrade trước rồi mới fetch partner
-          ]);
-          const upgrade   = upRes.data;
-          const pRes2     = await api.get(`/partners/${upgrade.partnerId}`);
-          const partner   = pRes2.data;
-          // Hợp đồng nâng cấp: dùng newRank trên upgradeRequest (Member→Leader→Partner→Senior Partner).
-          const newRank   = upgrade.newRank || partner?.rank || "Leader";
-          const comm      = getCommissionByRank(newRank);
-          const isIndependent2 = (partner?.memberType || "").toUpperCase() === "INDEPENDENT";
-          const hasLevel2      = partner?.level != null;
-
-          setRawPartner(partner);
-          setContract({
-            // Mã HĐ nâng cấp: HDDT + 6 chữ số tăng dần (lấy theo upgrade id, +1000 để tách
-            // khỏi HĐ đăng ký đầu tiên, đảm bảo không trùng).
-            code:            `HDDT${String(1000 + Number(upgrade.id)).padStart(6, "0")}`,
-            partnerCode:     upgrade.partnerCode || `${String(upgrade.partnerId).padStart(6, "0")}`,
-            partnerName:     upgrade.partnerName,
-            partnerEmail:    partner?.email,
-            partnerPhone:    partner?.phone,
-            partnerAddress:  partner?.address,
-            partnerCccd:     partner?.cccd,
-            contractType:    `Nâng hạng lên ${newRank}`,
-            signDate:        upgrade.approvedAt || upgrade.submittedAt,
-            status:          "approved",
-            contractFile:    upgrade.contractFile,
-            level:           partner?.level,
-            rank:            newRank,
-            showTierRates:   !isIndependent2 && hasLevel2,
-            isIndependent:   isIndependent2,
-            commissionL1:    comm.l1,
-            commissionL2:    comm.l2,
-            commissionL3:    comm.l3,
-            totalCommission: partner?.commission || 0,
-          });
+          const upRes = await api.get(`/upgradeRequests/${id}`);
+          const pRes  = await api.get(`/partners/${upRes.data.partnerId}`);
+          partner = pRes.data;
         }
+        if (!partner) { setError("Không tìm thấy hồ sơ đối tác."); return; }
+        setRawPartner(partner);
+
+        const upgRes = await api.get(`/upgradeRequests?partnerId=${partner.id}`);
+        const upgs   = Array.isArray(upgRes.data) ? upgRes.data : [];
+
+        // Xác định contract đang xem (theo source + id trong URL)
+        const allContracts = getContractsForPartner(partner, upgs);
+        const targetId = source === "partner" ? `partner-${id}` : `upgrade-${id}`;
+        const c = allContracts.find((x) => x.id === targetId) || allContracts[0];
+        if (!c) { setError("Không tìm thấy hợp đồng."); return; }
+
+        const isIndependent = (partner.memberType || "").toUpperCase() === "INDEPENDENT";
+        setContract({
+          code:            c.code,
+          partnerCode:     `${String(partner.code || partner.id).padStart(6, "0")}`,
+          partnerName:     partner.name,
+          partnerEmail:    partner.email,
+          partnerPhone:    partner.phone,
+          partnerAddress:  partner.address,
+          partnerCccd:     partner.cccd,
+          contractType:    c.contractType,
+          signDate:        c.signDate,
+          status:          c.status,                  // ACTIVE / PENDING / EXPIRED / REJECTED
+          contractFile:    c.contractFile,
+          level:           partner.level,
+          rank:            c.rank,
+          rates:           c.rates,
+          showTierRates:   !isIndependent,
+          isIndependent,
+          commissionL1:    c.rates.l1,
+          commissionL2:    c.rates.l2,
+          commissionL3:    c.rates.l3,
+          totalCommission: partner.commission || 0,
+        });
 
       } catch (err) {
         console.error(err);
@@ -185,8 +161,15 @@ function Partnercontractdetailpage() {
     </div>
   );
 
-  const statusLabel = contract.status === "approved" ? "Hiệu Lực" : "Chờ Duyệt";
-  const statusCls   = contract.status === "approved" ? "pc-badge--approved" : "pc-badge--pending";
+  const statusCfg = CONTRACT_STATUS[contract.status] || CONTRACT_STATUS.PENDING;
+  const statusLabel = statusCfg.label;
+  const statusCls   = (
+    contract.status === "ACTIVE"   ? "pc-badge--approved" :
+    contract.status === "EXPIRED"  ? "pc-badge--expired"  :
+    contract.status === "REJECTED" ? "pc-badge--expired"  :
+    "pc-badge--pending"
+  );
+  const examples = commissionExamples(contract.rates);
 
   return (
     <div className="pc-page">
@@ -232,10 +215,27 @@ function Partnercontractdetailpage() {
         {/* Row 2: Hoa hồng — INDEPENDENT/awaiting không có cấp nên không có % cấp 1/2/3 */}
         <div className="pc-detail-row">
           {contract.showTierRates ? (
-            <div className="pc-comm-row">
-              <CommCard label="Tỉ lệ hoa hồng cấp 1" value={contract.commissionL1} />
-              <CommCard label="Tỉ lệ hoa hồng cấp 2" value={contract.commissionL2} />
-              <CommCard label="Tỉ lệ hoa hồng cấp 3" value={contract.commissionL3} />
+            <div>
+              <div className="pc-comm-row">
+                <CommCard label="Tỉ lệ hoa hồng cấp 1" value={contract.commissionL1} />
+                <CommCard label="Tỉ lệ hoa hồng cấp 2" value={contract.commissionL2} />
+                <CommCard label="Tỉ lệ hoa hồng cấp 3" value={contract.commissionL3} />
+              </div>
+              {/* Ví dụ tính hoa hồng — admin reference */}
+              <div style={{
+                marginTop: 12, padding: "12px 14px", borderRadius: 8,
+                background: "#f0fdfa", border: "1px solid #99f6e4", fontSize: 13,
+              }}>
+                <p style={{ fontWeight: 700, color: "#0f766e", margin: "0 0 6px" }}>
+                  💡 Ví dụ tính hoa hồng (HĐ trị giá 10.000.000 đ)
+                </p>
+                {examples.map((ex, i) => (
+                  <div key={i} style={{ marginBottom: 4, color: "#334155" }}>
+                    <strong>{ex.title}:</strong>{" "}
+                    <span style={{ color: "#0f766e" }}>{ex.example}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div style={{
