@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useAuthStore from "../../store/authStore";
+import { getContractsForPartner } from "../../store/partnerContractService";
 import "./PartnerContractPage.css";
 
 const BASE = "http://localhost:3000";
@@ -12,6 +13,15 @@ const MONTHS      = Array.from({ length: 12 }, (_, i) => i + 1);
 const currentYear = new Date().getFullYear();
 const YEARS       = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
+// Status config theo spec mới: ACTIVE / PENDING / APPROVED / EXPIRED / REJECTED
+// (giữ key approved làm alias để không break filter cũ).
+const NEW_STATUS_CFG = {
+  ACTIVE:   { label: "Đang hiệu lực", cls: "pc-badge--approved" },
+  PENDING:  { label: "Chờ duyệt",     cls: "pc-badge--pending"  },
+  APPROVED: { label: "Đã duyệt",      cls: "pc-badge--approved" },
+  EXPIRED:  { label: "Hết hiệu lực",  cls: "pc-badge--expired"  },
+  REJECTED: { label: "Bị từ chối",    cls: "pc-badge--expired"  },
+};
 const STATUS_CFG = {
   approved: { label: "Hiệu Lực", cls: "pc-badge--approved" },
   expired:  { label: "Hết hạn",  cls: "pc-badge--expired"  },
@@ -34,59 +44,42 @@ const CONTRACT_TYPES = [
  * }
  */
 const buildContractList = (partners, upgradeRequests) => {
+  // Dùng partnerContractService để mỗi partner trả về list contract có status ACTIVE/EXPIRED/PENDING/REJECTED.
+  // Approved partner: contract đăng ký = ACTIVE (hoặc EXPIRED nếu đã có upgrade approved kế tiếp).
+  // Pending partner: contract đăng ký = PENDING.
+  // Upgrade approved: contract nâng hạng = ACTIVE (mới nhất) / EXPIRED (cũ hơn).
+  // Upgrade pending: PENDING. Upgrade rejected: REJECTED.
   const list = [];
-
-  // 1. HĐ đăng ký làm đối tác (từ partners approved)
-  partners
-    .filter((p) => p.status === "approved")
-    .forEach((p) => {
+  partners.forEach((p) => {
+    const contracts = getContractsForPartner(p, upgradeRequests);
+    contracts.forEach((c) => {
       list.push({
-        id:           `partner-${p.id}`,
+        id:           c.id,
         partnerId:    p.id,
         partnerCode:  `${String(p.code).padStart(6, "0")}`,
         partnerName:  p.name,
-        contractType: "Đăng ký làm đối tác",
-        signDate:     p.joinDate || "—",
-        status:       "approved",
-        contractFile: p.contractFile || null,
-        level:        1,
-        source:       "partner",
-        // Data đầy đủ cho detail page
+        contractType: c.contractType,
+        signDate:     c.signDate || "—",
+        status:       c.status,            // ACTIVE / PENDING / EXPIRED / REJECTED
+        contractFile: c.contractFile || null,
+        rank:         c.rank,
+        source:       c.source,
+        upgradeId:    c.rawUpgrade?.id,
         _partner:     p,
+        _upgrade:     c.rawUpgrade,
       });
     });
+  });
 
-  // 2. HĐ nâng hạng (từ upgradeRequests approved). Nâng HẠNG, KHÔNG đổi cấp trong cây.
-  upgradeRequests
-    .filter((r) => r.status === "approved")
-    .forEach((r) => {
-      const newRank = r.newRank || "Leader";
-      list.push({
-        id:           `upgrade-${r.id}`,
-        upgradeId:    r.id,
-        partnerId:    r.partnerId,
-        partnerCode:  r.partnerCode || `${String(r.partnerId).padStart(6, "0")}`,
-        partnerName:  r.partnerName,
-        contractType: `Nâng hạng lên ${newRank}`,
-        signDate:     r.approvedAt || r.submittedAt || "—",
-        status:       "approved",
-        contractFile: r.contractFile || null,
-        rank:         newRank,
-        source:       "upgrade",
-        // Data đầy đủ cho detail page
-        _upgrade:     r,
-      });
-    });
-
-  // Sắp xếp: mới nhất trước (theo signDate dd/mm/yyyy)
+  // Sort: mới nhất trước (theo signDate dd/mm/yyyy)
   list.sort((a, b) => {
     const toMs = (d = "") => {
-      const p = d.split("/");
+      const p = (d || "").split("/");
       if (p.length !== 3) return 0;
       return new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
     };
     return toMs(b.signDate) - toMs(a.signDate);
-  }); 
+  });
 
   return list;
 };
@@ -243,8 +236,10 @@ function Partnercontractlistpage() {
                 onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}
               >
                 <option value="">Trạng thái</option>
-                <option value="approved">Hiệu Lực</option>
-                <option value="expired">Hết hạn</option>
+                <option value="ACTIVE">Đang hiệu lực</option>
+                <option value="PENDING">Chờ duyệt</option>
+                <option value="EXPIRED">Hết hiệu lực</option>
+                <option value="REJECTED">Bị từ chối</option>
               </select>
               <select
                 className="pc-select"
@@ -311,9 +306,11 @@ function Partnercontractlistpage() {
                           </td>
                         </tr>
                       ) : pageData.map((c) => {
-                        const cfg = STATUS_CFG[c.status] || STATUS_CFG.approved;
+                        const cfg = NEW_STATUS_CFG[c.status] || NEW_STATUS_CFG.PENDING;
                         // Mã HĐ đối tác: HDDT + 6 chữ số (lấy theo partnerId / contract id)
-                        const hddtCode = `HDDT${String(c.partnerId).padStart(6, "0")}`;
+                        const hddtCode = c.source === "upgrade" && c.upgradeId
+                          ? `HDDT${String(1000 + Number(c.upgradeId)).padStart(6, "0")}`
+                          : `HDDT${String(c.partnerId).padStart(6, "0")}`;
                         return (
                           <tr
                             key={c.id}
@@ -324,11 +321,7 @@ function Partnercontractlistpage() {
                             <td style={{ color: "#0d9488", fontWeight: 600 }}>{c.partnerCode}</td>
                             <td>{c.partnerName}</td>
                             <td>{c.signDate}</td>
-                            <td>
-                              <span className={`pc-type-tag pc-type-tag--${c.level}`}>
-                                {c.contractType}
-                              </span>
-                            </td>
+                            <td>{c.contractType}</td>
                             <td>
                               <span className={`pc-badge ${cfg.cls}`}>{cfg.label}</span>
                             </td>

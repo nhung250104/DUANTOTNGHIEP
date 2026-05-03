@@ -203,9 +203,9 @@
       "address": "Q. Hải Châu, TP. Đà Nẵng",
       "status": "approved",
       "joinDate": "15/02/2025",
-      "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0 (ROOT)",
+      "parentId": "1",
+      "level": 1,
+      "levelLabel": "Cấp 1",
       "contracts": 8,
       "commission": 90000000,
       "refLink": "sivip.vn/ref/000002",
@@ -224,7 +224,8 @@
       "transferStatus": null,
       "memberType": "NORMAL",
       "rank": "Member",
-      "rankLabel": "Member"
+      "rankLabel": "Member",
+      "referralCode": "000001"
     },
     {
       "id": "3",
@@ -236,9 +237,9 @@
       "address": "Q. Thanh Khê, TP. Đà Nẵng",
       "status": "approved",
       "joinDate": "20/03/2025",
-      "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0 (ROOT)",
+      "parentId": "2",
+      "level": 2,
+      "levelLabel": "Cấp 2",
       "contracts": 5,
       "commission": 60000000,
       "refLink": "sivip.vn/ref/000003",
@@ -257,7 +258,8 @@
       "transferStatus": null,
       "memberType": "NORMAL",
       "rank": "Member",
-      "rankLabel": "Member"
+      "rankLabel": "Member",
+      "referralCode": "000002"
     },
     {
       "id": "4",
@@ -302,9 +304,9 @@
       "address": "TP. Hồ Chí Minh",
       "status": "approved",
       "joinDate": "05/05/2025",
-      "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0 (ROOT)",
+      "parentId": "3",
+      "level": 3,
+      "levelLabel": "Cấp 3",
       "contracts": 4,
       "commission": 48000000,
       "refLink": "sivip.vn/ref/000005",
@@ -323,7 +325,8 @@
       "transferStatus": null,
       "memberType": "NORMAL",
       "rank": "Member",
-      "rankLabel": "Member"
+      "rankLabel": "Member",
+      "referralCode": "000003"
     },
     {
       "id": "6",
@@ -335,9 +338,9 @@
       "address": "TP. Huế",
       "status": "approved",
       "joinDate": "20/05/2025",
-      "parentId": null,
-      "level": 0,
-      "levelLabel": "Cấp 0 (ROOT)",
+      "parentId": "1",
+      "level": 1,
+      "levelLabel": "Cấp 1",
       "contracts": 2,
       "commission": 22000000,
       "refLink": "sivip.vn/ref/000006",
@@ -356,7 +359,8 @@
       "transferStatus": null,
       "memberType": "NORMAL",
       "rank": "Member",
-      "rankLabel": "Member"
+      "rankLabel": "Member",
+      "referralCode": "000001"
     },
     {
       "id": "7",
@@ -378,7 +382,7 @@
       "submittedAt": "10:59:14 07/04/2026",
       "userId": "8",
       "parentId": "4",
-      "referralCode": null,
+      "referralCode": "000004",
       "level": 1,
       "levelLabel": "Cấp 1",
       "contracts": 0,
