@@ -1,25 +1,20 @@
 /**
  * src/pages/admin/Orgchartpage.jsx
  *
- * Sơ đồ cây đối tác (org chart) — tái sử dụng cho cả admin và user (userMode).
+ * Sơ đồ cây đối tác — dùng cho cả admin và user (userMode).
  *
- * QUY TẮC CÂY (theo spec MLM):
- *   - ROOT: parent_id = null, level = 0
- *   - Con:  level = level(parent) + 1
- *   - Tối đa 3 cấp (level ≤ 3)
- *   - INDEPENDENT đứng ngoài cây phân cấp
- *   - Phần `level` ở data đã được service tính sẵn khi gắn / chuyển nhánh
+ * Theo spec MLM mới:
+ *   - Cây quản lý qua parent_id; ROOT = Cấp 0; con = parent.level + 1; max 3.
+ *   - INDEPENDENT đứng ngoài cây (level=null).
+ *   - Cả admin và member đều thấy CÂY HOÀN CHỈNH:
+ *       + UPLINE: từ ROOT xuống cha trực tiếp.
+ *       + Bản thân (highlight).
+ *       + DOWNLINE: toàn bộ tuyến dưới.
+ *   - Admin: search bất kỳ partner → hiển thị cây từ ROOT của partner đó xuống.
+ *   - User: tự khoá vào partner của mình → hiển thị cây từ ROOT xuống.
  *
- * GHOST RENDERING:
- *   Khi 1 user đã chuyển nhánh, ở vị trí cũ vẫn hiển thị 1 dòng "ghost"
- *   nhãn "Đã chuyển qua nhánh khác", lấy từ /branchTransferRequests có
- *   status=approved + currentParentId.
- *
- * USER MODE:
- *   - Tự khoá root vào partner của user đang đăng nhập.
- *   - Chỉ hiển thị: cấp trên trực tiếp + bản thân (không tuyến dưới, không siblings).
- *   - INDEPENDENT: hiển thị thông báo riêng (không có cây).
- *   - User chưa được duyệt / không có hồ sơ partner: empty state riêng.
+ * Ghost rendering: branchTransferRequests có status=approved + currentParentId
+ *   → ở cha cũ hiện 1 dòng "Đã chuyển qua nhánh khác".
  */
 
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -27,120 +22,79 @@ import { useNavigate } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
 import api from "../../store/api";
 import useAuthStore from "../../store/authStore";
+import {
+  computeLevel, findRoot, getTree, countF1, TREE_MAX_DEPTH,
+} from "../../store/treeService";
 import "./Orgchartpage.css";
 
-const MAX_TREE_DEPTH = 3;
-
-/* ══════════════════════════════════════════════
-   Helpers (pure, không đụng React)
-══════════════════════════════════════════════ */
 const fmt = (n) => (n != null ? n.toLocaleString("vi-VN") + " đ" : "—");
-
-/** Build map id → node với mảng children. Bỏ qua entry không hợp lệ + self-loop. */
-function buildMap(list) {
-  const map = {};
-  (list || []).forEach((p) => {
-    if (p?.id != null) map[p.id] = { ...p, children: [] };
-  });
-  (list || []).forEach((p) => {
-    if (
-      p?.parentId &&
-      p.id !== p.parentId &&        // không self-loop
-      map[p.parentId] &&
-      map[p.id]
-    ) {
-      map[p.parentId].children.push(map[p.id]);
-    }
-  });
-  return map;
-}
-
-/** Lấy toàn bộ node trong subtree (kể cả root). Có cycle-guard. */
-function flattenTree(root) {
-  const out = [];
-  const seen = new Set();
-  const walk = (n) => {
-    if (!n || seen.has(n.id)) return;
-    seen.add(n.id);
-    out.push(n);
-    (n.children || []).forEach(walk);
-  };
-  walk(root);
-  return out;
-}
-
-/** Gán _rel = độ sâu tương đối từ root được hiển thị (root = 1). Cycle-guard. */
-function assignRelLevel(root) {
-  const seen = new Set();
-  const walk = (n, rel) => {
-    if (!n || seen.has(n.id)) return;
-    seen.add(n.id);
-    n._rel = rel;
-    (n.children || []).forEach((c) => walk(c, rel + 1));
-  };
-  walk(root, 1);
-}
 
 /* ══════════════════════════════════════════════
    TreeRow – một node trong cây
 ══════════════════════════════════════════════ */
-function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter, ghostsByOldParent = {} }) {
-  if (!node) return null;
-  if (depth > maxDepth) return null;
+function TreeRow({
+  node, depth, maxDepth,
+  expandedIds, onToggle,
+  highlightId, showMeBadge = false,
+  ghostsByOldParent = {},
+  allPartners = [],
+}) {
+  if (!node || depth > maxDepth) return null;
 
-  const hasChildren = (node.children?.length || 0) > 0;
-  const isExpanded  = expandedIds.has(node.id);
-  const relLevel    = node._rel ?? 1;
-  const ghosts      = ghostsByOldParent[String(node.id)] || [];
+  const hasChildren  = (node.children?.length || 0) > 0;
+  const isExpanded   = expandedIds.has(String(node.id));
+  const ghosts       = ghostsByOldParent[String(node.id)] || [];
   const showChildren = hasChildren || ghosts.length > 0;
-
-  // Lọc theo cấp tương đối: chỉ ẩn dòng hiện tại, vẫn render con để có thể "lọt"
-  // qua các cấp sâu hơn.
-  const matchLevel = levelFilter === 0 || relLevel === levelFilter;
-  if (!matchLevel && !showChildren) return null;
-
-  const isRoot    = depth === 1;
-  const isPending = node.transferStatus === "pending";
+  const isFocused    = String(node.id) === String(highlightId);
+  const absLevel     = computeLevel(node.id, allPartners);
+  const f1           = countF1(node.id, allPartners);
 
   return (
     <>
-      {matchLevel && (
-        <div
-          className={`oc-row ${isRoot ? "oc-row--root" : ""}`}
-          style={{ paddingLeft: `${(depth - 1) * 24 + 12}px` }}
+      <div
+        className={`oc-row ${depth === 1 ? "oc-row--root" : ""} ${isFocused ? "oc-row--me" : ""}`}
+        style={{
+          paddingLeft: `${(depth - 1) * 24 + 12}px`,
+          ...(isFocused && {
+            background: "linear-gradient(90deg, #ecfeff 0%, transparent 80%)",
+            borderLeft: "3px solid #0d9488",
+          }),
+        }}
+      >
+        <button
+          className={`oc-row-toggle ${!showChildren ? "oc-row-toggle--leaf" : ""}`}
+          onClick={() => showChildren && onToggle(String(node.id))}
+          disabled={!showChildren}
         >
-          <button
-            className={`oc-row-toggle ${!showChildren ? "oc-row-toggle--leaf" : ""}`}
-            onClick={() => showChildren && onToggle(node.id)}
-            disabled={!showChildren}
-          >
-            {showChildren ? (isExpanded ? "−" : "+") : "+"}
-          </button>
+          {showChildren ? (isExpanded ? "−" : "+") : "·"}
+        </button>
 
-          <span className="oc-row-name">{node.name}</span>
+        <span className="oc-row-name" style={isFocused ? { fontWeight: 700, color: "#0f766e" } : null}>
+          {node.name}{isFocused && showMeBadge && <span style={{
+            marginLeft: 6, fontSize: 11, padding: "1px 6px",
+            background: "#0d9488", color: "#fff", borderRadius: 4,
+          }}>BẠN</span>}
+        </span>
 
-          <div className="oc-row-badges">
-            <span className="oc-badge oc-badge--code">#{node.code}</span>
-            <span className="oc-badge oc-badge--contract">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              {node.contracts ?? 0} HĐ
+        <div className="oc-row-badges">
+          <span className="oc-badge oc-badge--code">#{node.code}</span>
+          {absLevel != null && (
+            <span className="oc-badge oc-badge--code" title="Cấp tuyệt đối trong cây">
+              {absLevel === 0 ? "Cấp 0 (ROOT)" : `Cấp ${absLevel}`}
             </span>
-            <span className="oc-badge oc-badge--commission">$ {fmt(node.commission)}</span>
-            {node.level != null && (
-              <span className="oc-badge oc-badge--code" title="Cấp trong cây (tree depth)">
-                Cấp {node.level}
-              </span>
-            )}
-          </div>
-
-          {isPending && <span className="oc-warn oc-warn--pending">⚠ Yêu cầu chuyển nhánh</span>}
+          )}
+          <span className="oc-badge oc-badge--contract" title={`F1: ${f1} con trực tiếp`}>
+            F1: {f1}
+          </span>
+          <span className="oc-badge oc-badge--contract">{node.contracts ?? 0} HĐ</span>
+          <span className="oc-badge oc-badge--commission">$ {fmt(node.commission)}</span>
         </div>
-      )}
 
-      {/* Children thật */}
+        {node.transferStatus === "pending" &&
+          <span className="oc-warn oc-warn--pending">⚠ Yêu cầu chuyển nhánh</span>}
+      </div>
+
+      {/* Children */}
       {hasChildren && isExpanded && node.children.map((child) => (
         <TreeRow
           key={child.id}
@@ -149,8 +103,10 @@ function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter, gh
           maxDepth={maxDepth}
           expandedIds={expandedIds}
           onToggle={onToggle}
-          levelFilter={levelFilter}
+          highlightId={highlightId}
+          showMeBadge={showMeBadge}
           ghostsByOldParent={ghostsByOldParent}
+          allPartners={allPartners}
         />
       ))}
 
@@ -177,33 +133,53 @@ function TreeRow({ node, depth, maxDepth, expandedIds, onToggle, levelFilter, gh
 }
 
 /* ══════════════════════════════════════════════
-   StatsTable – thống kê cây theo cấp tương đối
+   StatsTable – thống kê theo cấp tuyệt đối (0..3)
 ══════════════════════════════════════════════ */
-function StatsTable({ rootNode }) {
-  const all = flattenTree(rootNode);
-  if (all.length === 0) return null;
+function StatsTable({ rootNode, allPartners }) {
+  if (!rootNode) return null;
 
-  const maxRel = Math.max(1, ...all.map((n) => n._rel ?? 1));
-  const rows = Array.from({ length: maxRel }, (_, i) => {
-    const lvl   = i + 1;
-    const group = all.filter((n) => n._rel === lvl);
-    return {
-      label:      lvl === 1 ? "Cấp 1 (Gốc)" : `Cấp ${lvl}`,
-      count:      group.length,
-      contracts:  group.reduce((s, n) => s + (n.contracts || 0), 0),
-      commission: group.reduce((s, n) => s + (n.commission || 0), 0),
-    };
+  // Flatten subtree
+  const flat = [];
+  const seen = new Set();
+  const walk = (n) => {
+    if (!n || seen.has(String(n.id))) return;
+    seen.add(String(n.id));
+    flat.push(n);
+    (n.children || []).forEach(walk);
+  };
+  walk(rootNode);
+  if (flat.length === 0) return null;
+
+  // Group theo cấp tuyệt đối
+  const byLevel = {};
+  flat.forEach((p) => {
+    const lv = computeLevel(p.id, allPartners);
+    if (lv == null) return;
+    (byLevel[lv] = byLevel[lv] || []).push(p);
   });
+
+  const rows = [0, 1, 2, 3]
+    .filter((lv) => byLevel[lv] && byLevel[lv].length > 0)
+    .map((lv) => {
+      const group = byLevel[lv];
+      return {
+        label:      lv === 0 ? "Cấp 0 (ROOT)" : `Cấp ${lv}`,
+        count:      group.length,
+        contracts:  group.reduce((s, n) => s + (n.contracts || 0), 0),
+        commission: group.reduce((s, n) => s + (n.commission || 0), 0),
+      };
+    });
+
   const total = {
-    count:      all.length,
-    contracts:  all.reduce((s, n) => s + (n.contracts || 0), 0),
-    commission: all.reduce((s, n) => s + (n.commission || 0), 0),
+    count:      flat.length,
+    contracts:  flat.reduce((s, n) => s + (n.contracts || 0), 0),
+    commission: flat.reduce((s, n) => s + (n.commission || 0), 0),
   };
 
   return (
     <div className="oc-stats">
       <h3 className="oc-stats-title">
-        Bảng thống kê cây của <span className="oc-teal">{rootNode.name}</span>
+        Thống kê cây của <span className="oc-teal">{rootNode.name}</span>
       </h3>
       <div className="oc-stats-wrap">
         <table className="oc-stats-table">
@@ -244,7 +220,7 @@ function Orgchartpage({ userMode = false } = {}) {
   const navigate    = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
 
-  /* ── State (LƯU Ý: hooks luôn phải gọi không điều kiện) ── */
+  /* Hooks (luôn gọi không điều kiện) */
   const [allPartners,      setAllPartners     ] = useState([]);
   const [transferRequests, setTransferRequests] = useState([]);
   const [loading,          setLoading         ] = useState(true);
@@ -252,14 +228,13 @@ function Orgchartpage({ userMode = false } = {}) {
 
   const [searchText,  setSearchText ] = useState("");
   const [showDrop,    setShowDrop   ] = useState(false);
-  const [rootNode,    setRootNode   ] = useState(null);
-  const [levelFilter, setLevelFilter] = useState(0);
+  const [focusedId,   setFocusedId  ] = useState(null);   // partner đang focus (admin search hoặc me trong userMode)
   const [maxDepth,    setMaxDepth   ] = useState(10);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
   const searchRef = useRef();
 
-  /* ── Fetch data lần đầu ── */
+  /* Fetch */
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -285,7 +260,26 @@ function Orgchartpage({ userMode = false } = {}) {
     return () => { cancelled = true; };
   }, []);
 
-  /* ── Ghost map: oldParentId → [transfer entries…] ── */
+  /* User mode: tự khoá focusedId vào partner của user đang đăng nhập */
+  useEffect(() => {
+    if (!userMode || !currentUser || allPartners.length === 0) return;
+    try {
+      const me = allPartners.find(
+        (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
+      );
+      if (me) {
+        setFocusedId(String(me.id));
+        setSearchText(me.name);
+      } else {
+        setFocusedId(null);
+      }
+    } catch (e) {
+      console.error("Build user tree failed:", e);
+      setError("Lỗi khi xác định hồ sơ của bạn.");
+    }
+  }, [userMode, currentUser, allPartners]);
+
+  /* Ghost map */
   const ghostsByOldParent = useMemo(() => {
     return (transferRequests || []).reduce((acc, t) => {
       if (!t?.currentParentId) return acc;
@@ -301,55 +295,47 @@ function Orgchartpage({ userMode = false } = {}) {
     }, {});
   }, [transferRequests]);
 
-  /* ── User mode: tự dựng root = parent + me (không tuyến dưới) ── */
+  /* Tree từ ROOT của partner đang focus → hiển thị cây hoàn chỉnh */
+  const rootTree = useMemo(() => {
+    if (!focusedId) return null;
+    const root = findRoot(focusedId, allPartners);
+    if (!root) return null;
+    return getTree(root.id, allPartners);
+  }, [focusedId, allPartners]);
+
+  /* Khi rootTree đổi, expand toàn bộ cây mặc định để dễ nhìn upline+downline */
   useEffect(() => {
-    if (!userMode || !currentUser || allPartners.length === 0) return;
-    try {
-      const me = allPartners.find(
-        (p) => String(p.userId) === String(currentUser.id) || p.email === currentUser.email
-      );
-      if (!me) {
-        setRootNode(null);
-        return;
-      }
-      setSearchText(me.name);
+    if (!rootTree) { setExpandedIds(new Set()); return; }
+    const all = new Set();
+    const walk = (n) => {
+      if (!n) return;
+      all.add(String(n.id));
+      (n.children || []).forEach(walk);
+    };
+    walk(rootTree);
+    setExpandedIds(all);
+  }, [rootTree]);
 
-      // Strip toàn bộ descendants của me — user chỉ thấy bản thân + cha trực tiếp.
-      const meStripped = { ...me, children: [] };
-      let root;
-      if (me.parentId) {
-        const parent = allPartners.find((p) => String(p.id) === String(me.parentId));
-        root = parent
-          ? { ...parent, children: [meStripped] }
-          : meStripped;
-      } else {
-        root = meStripped;
-      }
-      assignRelLevel(root);
-      setExpandedIds(new Set([root.id, meStripped.id]));
-      setRootNode(root);
-    } catch (e) {
-      console.error("Build user tree failed:", e);
-      setError("Lỗi khi dựng sơ đồ cây của bạn.");
-    }
-  }, [userMode, currentUser, allPartners]);
+  /* Click outside dropdown */
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setShowDrop(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
-  /* ── Admin: search → chọn 1 partner làm root ── */
-  const buildRoot = (partner) => {
-    try {
-      const map  = buildMap(allPartners);
-      const root = map[partner.id];
-      if (!root) return;
-      assignRelLevel(root);
-      const initial = new Set([root.id]);
-      (root.children || []).forEach((c) => initial.add(c.id));
-      setExpandedIds(initial);
-      setRootNode(root);
-    } catch (e) {
-      console.error("Build admin tree failed:", e);
-      setError("Lỗi khi dựng sơ đồ cây.");
-    }
-  };
+  /* Search suggestions (admin only) */
+  const suggestions = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    if (q.length < 1 || userMode) return [];
+    return allPartners
+      .filter((p) =>
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.code || "").toString().includes(q)
+      )
+      .slice(0, 8);
+  }, [searchText, allPartners, userMode]);
 
   const onToggle = (id) => {
     setExpandedIds((prev) => {
@@ -359,38 +345,15 @@ function Orgchartpage({ userMode = false } = {}) {
     });
   };
 
-  /* ── Click outside → close dropdown ── */
-  useEffect(() => {
-    const handler = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setShowDrop(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  /* ── Search suggestions ── */
-  const suggestions = useMemo(() => {
-    const q = searchText.trim().toLowerCase();
-    if (q.length < 1) return [];
-    return allPartners
-      .filter((p) =>
-        (p.name || "").toLowerCase().includes(q) ||
-        (p.code || "").toString().includes(q)
-      )
-      .slice(0, 8);
-  }, [searchText, allPartners]);
-
   const handleSelect = (p) => {
     setSearchText(p.name);
     setShowDrop(false);
-    buildRoot(p);
+    setFocusedId(String(p.id));
   };
 
   const depthOptions = Array.from({ length: 10 }, (_, i) => i + 1);
 
-  /* ── Early return: INDEPENDENT user → không có cây ── */
+  /* INDEPENDENT user → không có cây */
   if (userMode && currentUser?.memberType === "INDEPENDENT") {
     return (
       <div className="oc-page">
@@ -409,11 +372,15 @@ function Orgchartpage({ userMode = false } = {}) {
 
   return (
     <div className="oc-page">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="page-header">
         <div className="page-header-left">
           <h1>{userMode ? "Sơ đồ cây của tôi" : "Sơ đồ đối tác hệ thống"}</h1>
-          {userMode && <p>Bạn và cấp trên trực tiếp (tối đa {MAX_TREE_DEPTH} cấp)</p>}
+          <p>
+            {userMode
+              ? `Cây hoàn chỉnh của tuyến bạn — từ ROOT xuống tối đa ${TREE_MAX_DEPTH} cấp.`
+              : `Tìm đối tác → xem cây hoàn chỉnh từ ROOT xuống (max ${TREE_MAX_DEPTH} cấp).`}
+          </p>
         </div>
         <button
           className="oc-btn-request"
@@ -423,7 +390,7 @@ function Orgchartpage({ userMode = false } = {}) {
         </button>
       </div>
 
-      {/* ── Filter card ── */}
+      {/* Filter card */}
       <div className="oc-filter-card">
         {!userMode && (
           <div className="oc-filter-row">
@@ -436,24 +403,27 @@ function Orgchartpage({ userMode = false } = {}) {
             <div className="oc-search-wrap" ref={searchRef}>
               <input
                 className="oc-search-input"
-                placeholder="Tìm kiếm theo tên hoặc mã đối tác..."
+                placeholder="Tên hoặc mã đối tác..."
                 value={searchText}
                 onChange={(e) => { setSearchText(e.target.value); setShowDrop(true); }}
                 onFocus={() => setShowDrop(true)}
               />
               {showDrop && suggestions.length > 0 && (
                 <div className="oc-dropdown">
-                  {suggestions.map((p) => (
-                    <div key={p.id} className="oc-dropdown-item" onMouseDown={() => handleSelect(p)}>
-                      <div>
-                        <span className="oc-dropdown-name">{p.name}</span>
-                        <span className="oc-dropdown-addr">{p.address || ""}</span>
+                  {suggestions.map((p) => {
+                    const lv = computeLevel(p.id, allPartners);
+                    return (
+                      <div key={p.id} className="oc-dropdown-item" onMouseDown={() => handleSelect(p)}>
+                        <div>
+                          <span className="oc-dropdown-name">{p.name}</span>
+                          <span className="oc-dropdown-addr">{p.address || ""}</span>
+                        </div>
+                        <span className="oc-dropdown-meta">
+                          #{p.code} · {lv == null ? "Tự do" : `Cấp ${lv}`}
+                        </span>
                       </div>
-                      <span className="oc-dropdown-meta">
-                        #{p.code} · {p.level != null ? `Cấp ${p.level}` : "Chưa có cấp"}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -461,26 +431,7 @@ function Orgchartpage({ userMode = false } = {}) {
         )}
 
         <div className="oc-filter-row">
-          <label className="oc-filter-label">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-            </svg>
-            Cấp tương đối:
-          </label>
-          <select
-            className="oc-select"
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(Number(e.target.value))}
-          >
-            <option value={0}>Tất cả</option>
-            {[1, 2, 3].map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-
-          <label className="oc-filter-label" style={{ marginLeft: 20 }}>
-            Số cấp nhánh con hiển thị:
-          </label>
+          <label className="oc-filter-label">Số cấp hiển thị:</label>
           <select
             className="oc-select"
             value={maxDepth}
@@ -490,58 +441,59 @@ function Orgchartpage({ userMode = false } = {}) {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
+          <span style={{ fontSize: 12, color: "#64748b", marginLeft: 12 }}>
+            (cây tối đa {TREE_MAX_DEPTH} cấp theo spec; chọn 4–10 nếu muốn xem cả ghost rows)
+          </span>
         </div>
       </div>
 
-      {/* ── Loading / Error ── */}
+      {/* Loading / Error */}
       {loading && (
         <div className="oc-loading">
           <div className="oc-spinner" /><p>Đang tải dữ liệu...</p>
         </div>
       )}
-      {error && !loading && (
-        <div className="oc-error">⚠️ {error}</div>
-      )}
+      {error && !loading && <div className="oc-error">⚠️ {error}</div>}
 
-      {/* ── Empty state ── */}
-      {!loading && !error && !rootNode && (
+      {/* Empty state */}
+      {!loading && !error && !rootTree && (
         <div className="oc-empty">
           <div className="oc-empty-icon">🔍</div>
           <p>
             {userMode
-              ? "Bạn chưa có hồ sơ đối tác đã duyệt — chưa thể hiển thị sơ đồ cây. Vui lòng liên hệ admin nếu hồ sơ đã được duyệt nhưng vẫn không thấy."
-              : "Hãy nhập tên hoặc mã đối tác bên trên để xem sơ đồ phân cấp."}
+              ? "Bạn chưa có hồ sơ đối tác đã duyệt — chưa thể hiển thị sơ đồ. Vui lòng liên hệ admin nếu hồ sơ đã duyệt nhưng vẫn không thấy."
+              : "Hãy nhập tên hoặc mã đối tác bên trên để xem cây."}
           </p>
         </div>
       )}
 
-      {/* ── Tree + Stats ── */}
-      {!loading && !error && rootNode && (
+      {/* Tree + Stats */}
+      {!loading && !error && rootTree && (
         <>
           <div className="oc-tree-card">
             <h3 className="oc-tree-title">
-              Sơ đồ cây Đối tác <span className="oc-teal">{rootNode.name}</span>
-              {rootNode.level != null && (
-                <span style={{ fontSize: 13, marginLeft: 10, color: "#64748b" }}>
-                  (Cấp tuyệt đối trong hệ thống: {rootNode.level})
-                </span>
-              )}
+              Sơ đồ cây <span className="oc-teal">{rootTree.name}</span>
+              <span style={{ fontSize: 12, marginLeft: 10, color: "#64748b", fontWeight: 400 }}>
+                (ROOT của nhánh{userMode ? " bạn đang ở trong" : " được chọn"})
+              </span>
             </h3>
 
             <div className="oc-tree">
               <TreeRow
-                node={rootNode}
+                node={rootTree}
                 depth={1}
                 maxDepth={maxDepth}
                 expandedIds={expandedIds}
                 onToggle={onToggle}
-                levelFilter={levelFilter}
+                highlightId={focusedId}
+                showMeBadge={userMode}
                 ghostsByOldParent={ghostsByOldParent}
+                allPartners={allPartners}
               />
             </div>
           </div>
 
-          <StatsTable rootNode={rootNode} />
+          <StatsTable rootNode={rootTree} allPartners={allPartners} />
         </>
       )}
     </div>

@@ -295,8 +295,8 @@
       "status": "approved",
       "joinDate": "01/01/2025",
       "parentId": null,
-      "level": null,
-      "levelLabel": "Chưa có cấp",
+      "level": 0,
+      "levelLabel": "Cấp 0 (ROOT)",
       "contracts": 10,
       "commission": 125000000,
       "refLink": "sivip.vn/ref/000001",
@@ -327,9 +327,15 @@
       "address": "Q. Hải Châu, TP. Đà Nẵng",
       "status": "approved",
       "joinDate": "15/02/2025",
+<<<<<<< HEAD
       "parentId": "6",
       "level": 2,
       "levelLabel": "Cấp 2",
+=======
+      "parentId": null,
+      "level": 0,
+      "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
       "contracts": 8,
       "commission": 90000000,
       "refLink": "sivip.vn/ref/000002",
@@ -361,9 +367,15 @@
       "address": "Q. Thanh Khê, TP. Đà Nẵng",
       "status": "approved",
       "joinDate": "20/03/2025",
+<<<<<<< HEAD
       "parentId": "5",
       "level": 2,
       "levelLabel": "Cấp 2",
+=======
+      "parentId": null,
+      "level": 0,
+      "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
       "contracts": 5,
       "commission": 60800000,
       "refLink": "sivip.vn/ref/000003",
@@ -395,11 +407,19 @@
       "address": "Hà Nội",
       "status": "approved",
       "joinDate": "10/04/2025",
+<<<<<<< HEAD
       "parentId": "3",
       "level": 1,
       "levelLabel": "Cấp 1",
       "contracts": 5,
       "commission": 39950000,
+=======
+      "parentId": null,
+      "level": 0,
+      "levelLabel": "Cấp 0 (ROOT)",
+      "contracts": 4,
+      "commission": 37550000,
+>>>>>>> fix/routing-and-auth-issues
       "refLink": "sivip.vn/ref/000004",
       "contractFile": "thu_trao_doi_lo_trinh_luong.docx",
       "bank": null,
@@ -429,9 +449,15 @@
       "address": "TP. Hồ Chí Minh",
       "status": "approved",
       "joinDate": "05/05/2025",
+<<<<<<< HEAD
       "parentId": "2",
       "level": 1,
       "levelLabel": "Cấp 1",
+=======
+      "parentId": null,
+      "level": 0,
+      "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
       "contracts": 4,
       "commission": 48240000,
       "refLink": "sivip.vn/ref/000005",
@@ -463,9 +489,15 @@
       "address": "TP. Huế",
       "status": "approved",
       "joinDate": "20/05/2025",
+<<<<<<< HEAD
       "parentId": "1",
       "level": 1,
       "levelLabel": "Cấp 1",
+=======
+      "parentId": null,
+      "level": 0,
+      "levelLabel": "Cấp 0 (ROOT)",
+>>>>>>> fix/routing-and-auth-issues
       "contracts": 2,
       "commission": 22000000,
       "refLink": "sivip.vn/ref/000006",
@@ -615,7 +647,7 @@
       "referralCode": null,
       "memberType": "INDEPENDENT",
       "level": null,
-      "levelLabel": "Chưa có cấp",
+      "levelLabel": "Tự do (ngoài cây)",
       "contracts": 0,
       "commission": 0,
       "refLink": "sivip.vn/ref/000011",

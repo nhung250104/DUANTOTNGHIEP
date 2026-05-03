@@ -56,7 +56,7 @@ const HeaderLogin = () => {
         <div className="hl-user" ref={dropdownRef}>
           <button
             className="hl-user-btn"
-            onClick={() => { setOpen(o => !o); setNotifOpen(false); }}
+            onClick={() => setOpen((o) => !o)}
             title={name}
           >
             {user?.avatar
