@@ -199,7 +199,7 @@ function CreateModal({ me, currentParent, allPartners, onClose, onCreated }) {
           }}>
             {currentParent
               ? <>{currentParent.name} <span style={{ color: "#94a3b8" }}>· {String(currentParent.code || currentParent.id).padStart(6,"0")}</span></>
-              : "Chưa có cấp trên (chưa được phân nhánh)"}
+              : "Chưa có cấp trên (đang là ROOT — Cấp 0)"}
           </div>
 
           <label className="cc-modal-label">

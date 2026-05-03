@@ -214,18 +214,28 @@ function Partnerdetailpage({ userMode = false } = {}) {
   const handleApprove = async (file) => {
     try {
       setSaving(true);
-      // level chỉ được gán khi đã có parentId (admin xếp nhánh hoặc auto-place sau).
-      // INDEPENDENT/awaiting → level=null, hiển thị "Chưa có cấp".
+      // INDEPENDENT: ngoài cây, level=null.
+      // Có parent: level = parent.level + 1.
+      // Không có parent: ROOT, level=0.
       const isIndependent = (partner.memberType || "").toUpperCase() === "INDEPENDENT";
-      const hasParent     = !!partner.parentId;
-      const newLevel      = !isIndependent && hasParent ? (partner.level ?? null) : null;
+      let newLevel, newLevelLabel;
+      if (isIndependent) {
+        newLevel      = null;
+        newLevelLabel = "Tự do (ngoài cây)";
+      } else if (partner.parentId) {
+        newLevel      = Math.min(3, (partner.level ?? 1));
+        newLevelLabel = `Cấp ${newLevel}`;
+      } else {
+        newLevel      = 0;
+        newLevelLabel = "Cấp 0 (ROOT)";
+      }
       const updated = {
         ...partner,
         status:       "approved",
         contractFile: file.name,
         joinDate:     new Date().toLocaleDateString("vi-VN"),
         level:        newLevel,
-        levelLabel:   newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp",
+        levelLabel:   newLevelLabel,
         rank:         partner.rank || "Member",
         rankLabel:    partner.rank || "Member",
         parentId:     partner.parentId || null,
@@ -375,7 +385,7 @@ function Partnerdetailpage({ userMode = false } = {}) {
                 <SectionTitle>Thông tin công việc</SectionTitle>
                 <div className="pd-grid">
                   <Field label="Mã đối tác"            value={p.code}              />
-                  <Field label="Cấp (vị trí trong cây)" value={p.level != null ? (p.levelLabel || `Cấp ${p.level}`) : "Chưa có cấp"} teal />
+                  <Field label="Cấp (vị trí trong cây)" value={p.level != null ? (p.levelLabel || `Cấp ${p.level}`) : "Tự do (ngoài cây)"} teal />
                   <Field label="Hạng (KPI)"            value={p.rank || p.rankLabel || "Member"} teal />
                   <Field label="Quản lý bởi"           value={p.managedBy}         />
                   <Field label="Ngân hàng"             value={p.bank}              />

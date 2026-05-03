@@ -316,11 +316,11 @@ function Partnercontractpage() {
     partnerPhone:    partner.phone,
     partnerAddress:  partner.address || partner.street,
     partnerCccd:     partner.cccd,
-    contractType:    `Đối tác Cấp ${partner.level ?? 3}`,
+    contractType:    partner.level != null ? `Đối tác Cấp ${partner.level}` : "Đối tác Tự do (ngoài cây)",
     signDate:        partner.joinDate,
     status:          partner.status,
     contractFile:    partner.contractFile,
-    level:           partner.level ?? 3,
+    level:           partner.level,
     commissionL1:    commission.l1,
     commissionL2:    commission.l2,
     commissionL3:    commission.l3,
@@ -370,7 +370,9 @@ function Partnercontractpage() {
                 fontSize: 11, fontWeight: 600,
                 background: "#e0f2fe", color: "#075985",
               }}>
-                {partner.levelLabel || `Cấp ${partner.level ?? 3}`}
+                {partner.level != null
+                  ? (partner.levelLabel || `Cấp ${partner.level}`)
+                  : "Tự do (ngoài cây)"}
               </span>
             </div>
           </div>

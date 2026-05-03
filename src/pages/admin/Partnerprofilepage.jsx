@@ -176,7 +176,7 @@ function PartnerTable({ data, onRowClick, extraColumns = [] }) {
                         background: "#f1f5f9", color: "#64748b", fontSize: 11, fontWeight: 600,
                         fontStyle: "italic",
                       }}>
-                        Chưa có cấp
+                        Tự do (ngoài cây)
                       </span>
                     )}
                   </td>
@@ -277,14 +277,23 @@ function Partnerprofilepage() {
       const approvedDate = new Date().toLocaleDateString("vi-VN");
 
       // 1. Cập nhật partner → approved
-      //    - level: chỉ có khi đã có parentId (admin xếp nhánh hoặc auto-place sau).
-      //      Awaiting/INDEPENDENT → level=null, levelLabel="Chưa có cấp".
-      //    - rank:  hạng KPI; mặc định "Member" cho hồ sơ mới
-      //    - refLink: link giới thiệu cá nhân (mọi partner approved đều có)
+      //    - INDEPENDENT: ngoài cây, level=null.
+      //    - Có parent: level = parent.level + 1 (đã được tính khi gán parent).
+      //    - Không có parent (awaiting / ROOT): level = 0 (theo spec: ROOT = Cấp 0).
+      //    - rank: mặc định "Member" cho hồ sơ mới.
+      //    - refLink: link giới thiệu cá nhân (mọi partner approved đều có).
       const isIndependent = (partner.memberType || "").toUpperCase() === "INDEPENDENT";
-      const hasParent     = !!partner.parentId;
-      const newLevel      = !isIndependent && hasParent ? (partner.level ?? null) : null;
-      const newLevelLabel = newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp";
+      let newLevel, newLevelLabel;
+      if (isIndependent) {
+        newLevel      = null;
+        newLevelLabel = "Tự do (ngoài cây)";
+      } else if (partner.parentId) {
+        newLevel      = Math.min(3, (partner.level ?? 1));
+        newLevelLabel = `Cấp ${newLevel}`;
+      } else {
+        newLevel      = 0;
+        newLevelLabel = "Cấp 0 (ROOT)";
+      }
       await partnerService.update(partner.id, {
         ...partner,
         status:     "approved",
@@ -608,9 +617,7 @@ function Partnerprofilepage() {
     if (!levelFilter) return true;
     if (levelFilter === "none") return p.level == null;
     if (p.level == null) return false;
-    const lv = Number(p.level);
-    if (levelFilter === "3plus") return lv >= 3;
-    return String(lv) === levelFilter;
+    return String(Number(p.level)) === levelFilter;
   };
 
   const approvedAll     = sortByNewest(partners.filter((p) => p.status === "approved" && matchSearch(p) && matchLevel(p)));
@@ -760,10 +767,11 @@ function Partnerprofilepage() {
                 <span style={{ marginRight: 6 }}>Lọc theo cấp:</span>
                 {[
                   { key: "",      label: "Tất cả" },
-                  { key: "none",  label: "Chưa có cấp" },
-                  { key: "1",     label: "Cấp 1" },
-                  { key: "2",     label: "Cấp 2" },
-                  { key: "3plus", label: "Cấp 3+" },
+                  { key: "0",     label: "Cấp 0 (ROOT)" },
+                  { key: "1",     label: "Cấp 1 (F1)" },
+                  { key: "2",     label: "Cấp 2 (F2)" },
+                  { key: "3",     label: "Cấp 3 (F3)" },
+                  { key: "none",  label: "Tự do" },
                 ].map((f) => {
                   const active = levelFilter === f.key;
                   return (
@@ -971,12 +979,14 @@ function JoinTeamTab({ requests, partners, currentUser, onChange }) {
             newLevel = Math.min(3, (Number.isFinite(parentLvl) ? parentLvl : 0) + 1);
           } catch { newLevel = 1; }
         }
+        // newLevel khi joinTeam: nếu có parent thì = parent.level+1; nếu không (corner case) → ROOT (0).
+        const finalLevel = newLevel != null ? newLevel : 0;
         await api.put(`/partners/${req.partnerId}`, {
           ...partner,
           parentId:     req.newParentId || null,
           memberType:   "NORMAL",
-          level:        newLevel,
-          levelLabel:   newLevel != null ? `Cấp ${newLevel}` : "Chưa có cấp",
+          level:        finalLevel,
+          levelLabel:   finalLevel === 0 ? "Cấp 0 (ROOT)" : `Cấp ${finalLevel}`,
           referralCode: parent?.code || null,
         });
 
