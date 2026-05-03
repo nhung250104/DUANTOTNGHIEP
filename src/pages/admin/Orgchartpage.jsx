@@ -25,6 +25,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import partnerService from "../../store/Partnerservice";
+import api from "../../store/api";
+import useAuthStore from "../../store/authStore";
 import "./Orgchartpage.css";
 
 const MAX_TREE_DEPTH = 3;
@@ -413,8 +415,11 @@ function Orgchartpage({ userMode = false } = {}) {
           <h1>{userMode ? "Sơ đồ cây của tôi" : "Sơ đồ đối tác hệ thống"}</h1>
           {userMode && <p>Bạn và cấp trên trực tiếp (tối đa {MAX_TREE_DEPTH} cấp)</p>}
         </div>
-        <button className="oc-btn-request">
-          ☰ Danh sách yêu cầu chuyển nhánh
+        <button
+          className="oc-btn-request"
+          onClick={() => navigate(userMode ? "/branch-transfer" : "/admin/branch-transfers")}
+        >
+          ☰ {userMode ? "Yêu cầu chuyển nhánh" : "Danh sách yêu cầu chuyển nhánh"}
         </button>
       </div>
 
