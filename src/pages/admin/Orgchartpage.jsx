@@ -29,19 +29,10 @@ function getAll(node, seen = new Set()) {
   return [node, ...(node.children || []).flatMap((c) => getAll(c, seen))];
 }
 
-<<<<<<< HEAD
-/** Tính relative level từ root (root = 1). Có cycle-guard để không crash stack. */
-function assignRelLevel(node, rel = 1, seen = new Set()) {
-  if (!node || seen.has(node.id)) return;
-  seen.add(node.id);
-  node._rel = rel;
-  (node.children || []).forEach((c) => assignRelLevel(c, rel + 1, seen));
-=======
 /** Tính relative level từ root (root = 1) */
 function assignRelLevel(node, rel = 1) {
   node._rel = rel; 
   (node.children || []).forEach((c) => assignRelLevel(c, rel + 1));
->>>>>>> 783acbfa802a5b295b7069ea1aec73cd3fa3a321
 }
 
 /* ══════════════════════════════════════════════
