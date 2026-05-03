@@ -21,7 +21,7 @@ function NewsPage() {
     const fetchNews = async () => {
       try {
         const data = await newsService.getAll();
-        setPosts(data); // ⚠️ nếu backend trả {data: []} thì sửa thành data.data
+        setPosts(data); 
       } catch (err) {
         console.error(err);
       } finally {
@@ -32,14 +32,12 @@ function NewsPage() {
     fetchNews();
   }, []);
 
-  // Lọc + sort id giảm dần (mới nhất lên đầu)
-  const filtered = posts
-    .filter(p => {
-      const matchCat = category === "Tất cả" || p.category === category;
-      const matchSearch = p.title?.toLowerCase().includes(search.toLowerCase());
-      return matchCat && matchSearch;
-    })
-    .sort((a, b) => Number(b.id) - Number(a.id));
+  // Lọc
+  const filtered = posts.filter(p => {
+    const matchCat = category === "Tất cả" || p.category === category;
+    const matchSearch = p.title?.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
+  });
 
   const openCreate = () => {
     setEditPost(null);
